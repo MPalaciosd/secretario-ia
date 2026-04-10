@@ -132,46 +132,41 @@ async function getOrCreateSubscription(clientId) {
 }
 
 // ── Connection ────────────────────────────────────────────────────────────────
-async function connectDB(retries = 5, delayMs = 3000) {
+async function connectDB() {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
-    console.error('❌ ERROR: MONGODB_URI no configurada en .env');
-    process.exit(1);
+    console.warn('[DB] ⚠️  MONGODB_URI no configurada — arrancando sin base de datos.');
+    return;
   }
 
-  // Opciones para máxima resiliencia
   const opts = {
-    serverSelectionTimeoutMS: 10000,
+    serverSelectionTimeoutMS: 8000,
     socketTimeoutMS: 45000,
     heartbeatFrequencyMS: 10000,
     maxPoolSize: 10,
   };
 
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      await mongoose.connect(uri, opts);
-      console.log('[DB] Conectado a MongoDB Atlas');
-      break;
-    } catch (err) {
-      console.error(`[DB] Intento ${attempt}/${retries} fallido: ${err.message}`);
-      if (attempt === retries) {
-        console.error('[DB] No se pudo conectar a MongoDB. Abortando.');
-        process.exit(1);
-      }
-      await new Promise(r => setTimeout(r, delayMs * attempt));
-    }
-  }
-
-  // Eventos de conexión para reconexión automática
   mongoose.connection.on('disconnected', () => {
-    console.warn('[DB] Desconectado de MongoDB. Mongoose intentará reconectar automáticamente.');
+    console.warn('[DB] Desconectado de MongoDB. Reintentando...');
+    setTimeout(() => tryConnect(uri, opts), 5000);
   });
-  mongoose.connection.on('reconnected', () => {
-    console.log('[DB] Reconectado a MongoDB Atlas.');
-  });
-  mongoose.connection.on('error', (err) => {
-    console.error('[DB] Error de conexión MongoDB:', err.message);
-  });
+  mongoose.connection.on('reconnected', () => console.log('[DB] Reconectado a MongoDB Atlas.'));
+  mongoose.connection.on('error', (err) => console.error('[DB] Error MongoDB:', err.message));
+
+  // Primer intento — no bloquea el arranque del servidor
+  tryConnect(uri, opts);
+}
+
+async function tryConnect(uri, opts, attempt = 1) {
+  try {
+    await mongoose.connect(uri, opts);
+    console.log('[DB] ✅ Conectado a MongoDB Atlas');
+  } catch (err) {
+    console.error(`[DB] Intento ${attempt} fallido: ${err.message}`);
+    // Reintentar indefinidamente con backoff (máx 30s)
+    const delay = Math.min(5000 * attempt, 30000);
+    setTimeout(() => tryConnect(uri, opts, attempt + 1), delay);
+  }
 }
 
 module.exports = {

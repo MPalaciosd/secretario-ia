@@ -14,7 +14,8 @@ async function main() {
   console.log(`\n🔱 ${config.shop.name} — pop BOT`);
   console.log('─'.repeat(45));
 
-  await connectDB();
+  // MongoDB conecta en background — no bloquea el arranque
+  connectDB();
   startServer();
   startKeepAlive(config.server.port);
 
