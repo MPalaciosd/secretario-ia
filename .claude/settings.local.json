@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npm install:*)",
+      "Bash(start:*)",
+      "Bash(node -e \"require\\(''./src/config''\\); require\\(''./src/db/database''\\); console.log\\(''OK - sin errores de sintaxis''\\)\")",
+      "Bash(node -e \":*)",
+      "Bash(curl -s http://localhost:3000/api/appointments)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(curl:*)",
+      "Bash(taskkill /F /IM node.exe /T)",
+      "Bash(findstr :3000)",
+      "Bash(taskkill /PID 3608 /F)",
+      "Bash(taskkill /PID 9832 /F)",
+      "Bash(wmic process:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(gh --version)",
+      "Bash(git --version)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh auth:*)",
+      "Bash(gh api:*)"
+    ]
+  }
+}
