@@ -1,37 +1,21 @@
 services:
   - type: web
-    name: popbot
+    name: secretario-ia
     runtime: node
     buildCommand: npm install
     startCommand: node index.js
-    plan: starter
+    plan: free
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3000
-
-      # Base de datos
       - key: MONGODB_URI
         sync: false
-
-      # IA
       - key: GROQ_API_KEY
         sync: false
-
-      # Telegram
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false
-
-      # Configuración del negocio
       - key: SHOP_NAME
         sync: false
       - key: ASSISTANT_NAME
-        sync: false
-      - key: SHOP_PHONE
-        sync: false
-      - key: SHOP_ADDRESS
         sync: false
       - key: BUSINESS_HOURS_START
         sync: false
@@ -43,29 +27,17 @@ services:
         sync: false
       - key: MAX_HISTORY_MESSAGES
         sync: false
-
-      # Stripe — pagos
-      - key: STRIPE_SECRET_KEY
+      - key: APP_PUBLIC_URL
         sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
-      - key: STRIPE_PRICE_BASIC
-        sync: false
-      - key: STRIPE_PRICE_PRO
-        sync: false
-      - key: STRIPE_PRICE_ENTERPRISE
-        sync: false
-
-      # Resend — emails transaccionales
-      - key: RESEND_API_KEY
-        sync: false
-      - key: EMAIL_FROM
-        sync: false
-
-      # CORS y URLs
       - key: FRONTEND_URL
         sync: false
       - key: ALLOWED_ORIGINS
         sync: false
-      - key: APP_PUBLIC_URL
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
         sync: false
