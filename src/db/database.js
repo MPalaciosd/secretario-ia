@@ -73,6 +73,17 @@ const paymentHistorySchema = new mongoose.Schema({
 }, { timestamps: true });
 paymentHistorySchema.index({ client_id: 1, createdAt: -1 });
 
+// ── Schema de entrenamiento ────────────────────────────────────────────────────
+// Ejemplos input→output que el admin añade para enseñar al bot cómo responder
+const trainingExampleSchema = new mongoose.Schema({
+  input: { type: String, required: true },        // Lo que dice el usuario
+  output: { type: String, required: true },       // Cómo debe responder el bot
+  categoria: { type: String, default: 'general' }, // Etiqueta para organizar
+  activo: { type: Boolean, default: true },        // Se puede desactivar sin borrar
+  notas: { type: String, default: '' },            // Nota interna del admin
+}, { timestamps: true });
+trainingExampleSchema.index({ categoria: 1, activo: 1 });
+
 const adRewardSchema = new mongoose.Schema({
   client_id: { type: String, required: true },
   credits_awarded: { type: Number, default: 5 },
@@ -81,14 +92,15 @@ const adRewardSchema = new mongoose.Schema({
 adRewardSchema.index({ client_id: 1, date: 1 });
 
 // ── Models ────────────────────────────────────────────────────────────────────
-const Client        = mongoose.model('Client', clientSchema);
-const Appointment   = mongoose.model('Appointment', appointmentSchema);
-const Conversation  = mongoose.model('Conversation', conversationSchema);
-const Message       = mongoose.model('Message', messageSchema);
-const Subscription  = mongoose.model('Subscription', subscriptionSchema);
-const Credits       = mongoose.model('Credits', creditsSchema);
-const PaymentHistory = mongoose.model('PaymentHistory', paymentHistorySchema);
-const AdReward      = mongoose.model('AdReward', adRewardSchema);
+const Client           = mongoose.model('Client', clientSchema);
+const Appointment      = mongoose.model('Appointment', appointmentSchema);
+const Conversation     = mongoose.model('Conversation', conversationSchema);
+const Message          = mongoose.model('Message', messageSchema);
+const Subscription     = mongoose.model('Subscription', subscriptionSchema);
+const Credits          = mongoose.model('Credits', creditsSchema);
+const PaymentHistory   = mongoose.model('PaymentHistory', paymentHistorySchema);
+const AdReward         = mongoose.model('AdReward', adRewardSchema);
+const TrainingExample  = mongoose.model('TrainingExample', trainingExampleSchema);
 
 // ── Funciones atómicas de créditos ────────────────────────────────────────────
 
@@ -172,7 +184,7 @@ async function tryConnect(uri, opts, attempt = 1) {
 module.exports = {
   connectDB,
   Client, Appointment, Conversation, Message,
-  Subscription, Credits, PaymentHistory, AdReward,
+  Subscription, Credits, PaymentHistory, AdReward, TrainingExample,
   consumeCredits, addCredits, getOrCreateSubscription,
   PLAN_CREDITS,
 };

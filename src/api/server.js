@@ -49,6 +49,7 @@ app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/stripe', require('./routes/stripe'));
 app.use('/api/credits', require('./routes/credits'));
 app.use('/api/casos', require('./routes/casos'));
+app.use('/api/training', require('./routes/training'));
 
 // ── Rutas de páginas ─────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
@@ -62,6 +63,9 @@ app.get('/pricing', (req, res) => {
 });
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, '../../public/dashboard.html'));
+});
+app.get('/training', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../public/training.html'));
 });
 
 // ── Socket.io — Chat en tiempo real ──────────────────────────────────────────

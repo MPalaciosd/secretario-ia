@@ -6,8 +6,29 @@ const availabilityService = require('../services/availabilityService');
 const appointmentService = require('../services/appointmentService');
 const clientService = require('../services/clientService');
 const conversationService = require('../services/conversationService');
+const { TrainingExample } = require('../db/database');
 
 const groq = new Groq({ apiKey: config.groq.apiKey });
+
+// ── Caché de ejemplos de entrenamiento (MongoDB, se refresca cada 2 min) ──────
+let trainingCache = [];
+let trainingCacheTime = 0;
+
+async function loadTrainingExamples() {
+  const now = Date.now();
+  if (trainingCache.length > 0 && now - trainingCacheTime < 120_000) return trainingCache;
+  try {
+    const examples = await TrainingExample.find({ activo: true })
+      .sort({ createdAt: -1 })
+      .limit(80)
+      .lean();
+    trainingCache = examples;
+    trainingCacheTime = now;
+  } catch {
+    // Si MongoDB no está disponible, usar caché anterior
+  }
+  return trainingCache;
+}
 
 const CASOS_PATH = path.join(__dirname, '../../config/casos.json');
 
@@ -285,8 +306,26 @@ async function processMessage(userMessage, channel, channelId, clientId = null) 
 
   const history = await conversationService.getHistory(conversation._id);
 
+  // Cargar ejemplos de entrenamiento de MongoDB e inyectarlos como few-shot
+  const trainingExamples = await loadTrainingExamples();
+  let trainingBlock = '';
+  if (trainingExamples.length > 0) {
+    const byCategoria = {};
+    for (const ex of trainingExamples) {
+      const cat = ex.categoria || 'general';
+      if (!byCategoria[cat]) byCategoria[cat] = [];
+      byCategoria[cat].push(`  Usuario: "${ex.input}"\n  Tú: "${ex.output}"`);
+    }
+    trainingBlock = '\n\nEJEMPLOS DE CONVERSACIONES REALES (aprende de estos patrones):\n' +
+      Object.entries(byCategoria)
+        .map(([cat, exs]) => `[${cat}]\n${exs.join('\n')}`)
+        .join('\n\n');
+  }
+
+  const systemPrompt = buildSystemPrompt() + trainingBlock;
+
   const messages = [
-    { role: 'system', content: buildSystemPrompt() },
+    { role: 'system', content: systemPrompt },
     ...history,
   ];
 
