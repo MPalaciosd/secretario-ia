@@ -5,7 +5,13 @@ const { Client, Subscription, Credits, PaymentHistory, addCredits, PLAN_CREDITS 
 const emailService = require('../../services/emailService');
 const { stripeLimiter } = require('../middleware/security');
 
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+// Inicialización lazy — solo falla si usas las rutas sin la key configurada
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY no configurada.');
+  }
+  return Stripe(process.env.STRIPE_SECRET_KEY);
+}
 
 // Planes con sus price IDs de Stripe (configurar en variables de entorno)
 const PLANS = {
@@ -49,11 +55,11 @@ router.post('/create-checkout', stripeLimiter, async (req, res) => {
     let customerId = sub?.stripe_customer_id;
 
     if (!customerId) {
-      const customer = await stripe.customers.create({ email, metadata: { clientId } });
+      const customer = await getStripe().customers.create({ email, metadata: { clientId } });
       customerId = customer.id;
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -78,7 +84,7 @@ router.post('/webhook', async (req, res) => {
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    event = getStripe().webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error('[Stripe] Webhook signature inválida:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -237,7 +243,7 @@ router.post('/portal', stripeLimiter, async (req, res) => {
       return res.status(404).json({ error: 'No se encontró suscripción activa.' });
     }
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
       return_url: `${process.env.FRONTEND_URL}/dashboard`,
     });
