@@ -1,22 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/auth');
+const { requirePro } = require('../middleware/subscription');
 const { createPlan, getPlans, getPlanDetails, formatPlanResponse } = require('../../services/planService');
 const { schedulePlan, getPlanSchedule, formatScheduleSummary } = require('../../services/schedulerService');
 
 /**
  * POST /api/plans
- * Create a new plan (does NOT schedule it automatically)
+ * Create a new AI-generated plan — PRO ONLY
  * Body: { weeks, goal, level, sessions_per_week?, session_duration_minutes?, focus_areas? }
  */
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', [authMiddleware, requirePro], async (req, res) => {
   try {
     const plan = await createPlan(req.user.id, req.body);
     res.status(201).json({
       success: true,
       plan,
       message: formatPlanResponse(plan),
-      next_step: 'Call POST /api/schedule with plan_id to schedule sessions in calendar'
+      next_step: 'Call POST /api/plans/:id/schedule to schedule sessions in calendar'
     });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -25,7 +26,6 @@ router.post('/', authMiddleware, async (req, res) => {
 
 /**
  * GET /api/plans
- * Get user's active plans
  */
 router.get('/', authMiddleware, async (req, res) => {
   try {
@@ -38,7 +38,6 @@ router.get('/', authMiddleware, async (req, res) => {
 
 /**
  * GET /api/plans/:id
- * Get plan details with sessions
  */
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
@@ -50,11 +49,10 @@ router.get('/:id', authMiddleware, async (req, res) => {
 });
 
 /**
- * POST /api/plans/:id/schedule
- * Schedule a plan's sessions in the calendar
- * Body: { start_date?, preferred_days?, preferred_time? }
+ * POST /api/plans/:id/schedule — PRO ONLY
+ * Schedule a plan's sessions intelligently in the calendar
  */
-router.post('/:id/schedule', authMiddleware, async (req, res) => {
+router.post('/:id/schedule', [authMiddleware, requirePro], async (req, res) => {
   try {
     const { start_date, preferred_days, preferred_time } = req.body;
     const sessions = await schedulePlan(req.user.id, req.params.id, {
@@ -70,6 +68,19 @@ router.post('/:id/schedule', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/plans/:id/sessions
+ * Get all scheduled sessions for a plan
+ */
+router.get('/:id/sessions', authMiddleware, async (req, res) => {
+  try {
+    const sessions = await getPlanSchedule(req.user.id, req.params.id);
+    res.json({ success: true, sessions, summary: formatScheduleSummary(sessions) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
