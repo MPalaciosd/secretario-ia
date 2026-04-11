@@ -1,25 +1,21 @@
 require('dotenv').config();
-
-const { connectDB } = require('./src/db/database');
-const { startServer, getApp } = require('./src/api/server');
-const { startKeepAlive } = require('./src/keepAlive');
+const express = require('express');
+const { Pool } = require('pg');
+const { startServer } = require('./src/api/server');
+const { initializeDatabase } = require('./src/db/database');
 const config = require('./src/config');
 
-if (!config.groq.apiKey) {
-  console.error('❌ ERROR: GROQ_API_KEY no configurada en .env');
-  process.exit(1);
-}
-
 async function main() {
-  console.log(`\n🔱 ${config.shop.name} — pop BOT`);
+  console.log('\n🧠 Secretario IA — Backend Inteligente');
   console.log('─'.repeat(45));
-
-  // MongoDB conecta en background — no bloquea el arranque
-  connectDB();
+  
+  // Initialize PostgreSQL database
+  await initializeDatabase();
+  
+  // Start Express server
   startServer();
-  startKeepAlive(config.server.port);
-
-  console.log('\n✅ pop BOT operativo.\n');
+  
+  console.log('\n✅ Sistema operativo.\n');
 }
 
 main().catch(err => {
@@ -38,8 +34,9 @@ process.on('unhandledRejection', (reason) => {
 
 async function shutdown(signal) {
   console.log(`\n[Shutdown] ${signal} — cerrando limpiamente...`);
-  const mongoose = require('mongoose');
-  await mongoose.connection.close();
+  const { getPool } = require('./src/db/database');
+  const pool = getPool();
+  if (pool) await pool.end();
   process.exit(0);
 }
 
