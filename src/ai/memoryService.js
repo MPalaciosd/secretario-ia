@@ -1,195 +1,113 @@
-const OpenAI = require('openai');
-const { query } = require('../db/database');
+const Groq = require('groq-sdk');
 const config = require('../config');
+const { query } = require('../db/database');
 
-const openai = new OpenAI({ apiKey: config.openai.apiKey });
+const groq = new Groq({ apiKey: config.groq.apiKey });
 
-// ─── SHORT-TERM MEMORY (últimas conversaciones en DB) ────────────────────────
+// ─── Build user context (short + long term memory) ───────────
+async function buildUserContext(userId) {
+  try {
+    // Short-term: last 10 messages
+    const shortResult = await query(
+      `SELECT role, content, metadata, created_at
+       FROM conversations
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 10`,
+      [userId]
+    );
+    const shortTermMemory = shortResult.rows.reverse();
 
-async function getShortTermMemory(userId, limit = 20) {
-  const result = await query(
-    `SELECT role, content, intent, function_called, created_at 
-     FROM conversations 
-     WHERE user_id = $1 
-     ORDER BY created_at DESC 
-     LIMIT $2`,
-    [userId, limit]
-  );
-  return result.rows.reverse(); // Return chronological order
-}
+    // Long-term: user preferences and habits
+    const longResult = await query(
+      `SELECT memory_type, content, metadata
+       FROM user_memory
+       WHERE user_id = $1
+       ORDER BY updated_at DESC
+       LIMIT 10`,
+      [userId]
+    );
+    const longTermMemory = longResult.rows;
 
-async function saveMessage(userId, role, content, extras = {}) {
-  const { intent, functionCalled, functionResult } = extras;
-  await query(
-    `INSERT INTO conversations (user_id, role, content, intent, function_called, function_result)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [userId, role, content, intent || null, functionCalled || null, 
-     functionResult ? JSON.stringify(functionResult) : null]
-  );
-}
-
-// ─── LONG-TERM MEMORY (preferencias y hábitos del usuario) ──────────────────
-
-async function getLongTermMemory(userId) {
-  const result = await query(
-    `SELECT up.*, u.name, u.email, u.timezone
-     FROM user_preferences up
-     JOIN users u ON u.id = up.user_id
-     WHERE up.user_id = $1`,
-    [userId]
-  );
-  return result.rows[0] || null;
-}
-
-async function updateUserPreferences(userId, preferences) {
-  const existing = await getLongTermMemory(userId);
-  
-  if (existing) {
-    const updateFields = [];
-    const values = [];
-    let paramIndex = 1;
-    
-    const validFields = [
-      'preferred_workout_days', 'preferred_workout_time', 'fitness_level',
-      'goals', 'availability', 'dietary_restrictions', 'other_preferences'
-    ];
-    
-    for (const [key, value] of Object.entries(preferences)) {
-      if (validFields.includes(key)) {
-        updateFields.push(`${key} = $${paramIndex}`);
-        values.push(typeof value === 'object' ? JSON.stringify(value) : value);
-        paramIndex++;
-      }
+    // Build context summary
+    let contextSummary = '';
+    if (longTermMemory.length > 0) {
+      contextSummary = 'Información del usuario:\n' +
+        longTermMemory.map(m => `- ${m.memory_type}: ${m.content}`).join('\n');
     }
-    
-    if (updateFields.length > 0) {
-      values.push(userId);
+
+    return { shortTermMemory, longTermMemory, contextSummary };
+  } catch (err) {
+    console.error('[Memory] buildUserContext error:', err.message);
+    return { shortTermMemory: [], longTermMemory: [], contextSummary: '' };
+  }
+}
+
+// ─── Save a message to conversation history ──────────────────
+async function saveMessage(userId, role, content, metadata = {}) {
+  try {
+    await query(
+      `INSERT INTO conversations (user_id, role, content, metadata)
+       VALUES ($1, $2, $3, $4)`,
+      [userId, role, content, JSON.stringify(metadata)]
+    );
+  } catch (err) {
+    console.error('[Memory] saveMessage error:', err.message);
+  }
+}
+
+// ─── Extract and update long-term memory (uses Groq) ─────────
+async function extractAndUpdateMemory(userId, message, intent, extractedData) {
+  // Only extract memory for certain intents
+  if (!['crear_evento','crear_plan','consultar'].includes(intent)) return;
+  if (!config.groq.apiKey) return;
+
+  try {
+    const prompt = `Analiza este mensaje de usuario y extrae información de memoria a largo plazo.
+Mensaje: "${message}"
+Intención detectada: ${intent}
+Datos extraídos: ${JSON.stringify(extractedData)}
+
+Si hay información relevante sobre preferencias, hábitos o disponibilidad del usuario,
+responde con JSON. Si no hay nada relevante, responde con {"memories": []}.
+
+Formato:
+{
+  "memories": [
+    {"type": "disponibilidad|preferencia|habito|objetivo", "content": "descripción breve"}
+  ]
+}
+Tipos válidos: disponibilidad (horarios libres), preferencia (gustos), habito (rutinas), objetivo (metas)
+Máximo 2 memorias. Solo información realmente útil para el futuro.`;
+
+    const response = await groq.chat.completions.create({
+      model:       config.groq.fastModel,
+      messages:    [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+      max_tokens:  200
+    });
+
+    const raw = response.choices[0].message.content.trim();
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return;
+
+    const result = JSON.parse(jsonMatch[0]);
+    if (!result.memories || result.memories.length === 0) return;
+
+    for (const mem of result.memories) {
+      if (!mem.type || !mem.content) continue;
       await query(
-        `UPDATE user_preferences SET ${updateFields.join(', ')}, updated_at = NOW() 
-         WHERE user_id = $${paramIndex}`,
-        values
+        `INSERT INTO user_memory (user_id, memory_type, content, metadata)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id, memory_type)
+         DO UPDATE SET content = $3, metadata = $4, updated_at = NOW()`,
+        [userId, mem.type, mem.content, JSON.stringify({ source: 'auto', intent })]
       );
     }
-  } else {
-    await query(
-      `INSERT INTO user_preferences (user_id, preferred_workout_days, preferred_workout_time, 
-         fitness_level, goals, availability, dietary_restrictions, other_preferences)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        userId,
-        JSON.stringify(preferences.preferred_workout_days || []),
-        preferences.preferred_workout_time || null,
-        preferences.fitness_level || null,
-        JSON.stringify(preferences.goals || []),
-        JSON.stringify(preferences.availability || {}),
-        JSON.stringify(preferences.dietary_restrictions || []),
-        JSON.stringify(preferences.other_preferences || {})
-      ]
-    );
-  }
-}
-
-// ─── EMBEDDINGS (semantic memory) ────────────────────────────────────────────
-
-async function createEmbedding(text) {
-  try {
-    const response = await openai.embeddings.create({
-      model: config.openai.embeddingModel,
-      input: text
-    });
-    return response.data[0].embedding;
   } catch (err) {
-    console.error('[Memory] Error creating embedding:', err.message);
-    return null;
+    // Non-critical — don't crash
+    console.error('[Memory] extractAndUpdateMemory error:', err.message);
   }
 }
 
-async function saveEmbedding(userId, content, category, metadata = {}) {
-  const embedding = await createEmbedding(content);
-  
-  await query(
-    `INSERT INTO user_embeddings (user_id, content, embedding, category, metadata)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [userId, content, embedding ? JSON.stringify(embedding) : null, category, JSON.stringify(metadata)]
-  );
-}
-
-async function searchSimilarMemories(userId, queryText, limit = 5) {
-  // Simple text search fallback if pgvector not available
-  const result = await query(
-    `SELECT content, category, metadata, created_at
-     FROM user_embeddings 
-     WHERE user_id = $1 
-     AND content ILIKE $2
-     ORDER BY created_at DESC
-     LIMIT $3`,
-    [userId, `%${queryText.split(' ').slice(0, 3).join('%')}%`, limit]
-  );
-  return result.rows;
-}
-
-// ─── CONTEXT BUILDER ─────────────────────────────────────────────────────────
-
-async function buildUserContext(userId) {
-  const [shortTermMemory, longTermMemory] = await Promise.all([
-    getShortTermMemory(userId, config.app.maxConversationHistory),
-    getLongTermMemory(userId)
-  ]);
-
-  let contextSummary = '';
-  
-  if (longTermMemory) {
-    contextSummary += `\nMEMORIA DEL USUARIO:`;
-    if (longTermMemory.fitness_level) contextSummary += `\n- Nivel físico: ${longTermMemory.fitness_level}`;
-    if (longTermMemory.preferred_workout_time) contextSummary += `\n- Horario preferido: ${longTermMemory.preferred_workout_time}`;
-    if (longTermMemory.preferred_workout_days?.length) {
-      contextSummary += `\n- Días preferidos: ${longTermMemory.preferred_workout_days.join(', ')}`;
-    }
-    if (longTermMemory.goals?.length) {
-      contextSummary += `\n- Objetivos: ${longTermMemory.goals.join(', ')}`;
-    }
-  }
-
-  return {
-    shortTermMemory,
-    longTermMemory,
-    contextSummary
-  };
-}
-
-// ─── EXTRACT AND UPDATE MEMORY FROM CONVERSATION ─────────────────────────────
-
-async function extractAndUpdateMemory(userId, userMessage, intent, extractedData) {
-  // Update preferences based on extracted data
-  const prefUpdates = {};
-  
-  if (extractedData.level) prefUpdates.fitness_level = extractedData.level;
-  if (extractedData.goal) {
-    const currentPrefs = await getLongTermMemory(userId);
-    const currentGoals = currentPrefs?.goals || [];
-    if (!currentGoals.includes(extractedData.goal)) {
-      prefUpdates.goals = [...currentGoals, extractedData.goal];
-    }
-  }
-  
-  if (Object.keys(prefUpdates).length > 0) {
-    await updateUserPreferences(userId, prefUpdates);
-  }
-  
-  // Save important info as embedding
-  if (intent === 'crear_plan' || intent === 'crear_evento') {
-    await saveEmbedding(userId, userMessage, intent, { extractedData, timestamp: new Date().toISOString() });
-  }
-}
-
-module.exports = {
-  getShortTermMemory,
-  saveMessage,
-  getLongTermMemory,
-  updateUserPreferences,
-  createEmbedding,
-  saveEmbedding,
-  searchSimilarMemories,
-  buildUserContext,
-  extractAndUpdateMemory
-};
+module.exports = { buildUserContext, saveMessage, extractAndUpdateMemory };
