@@ -1,17 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/auth');
+const { checkEventLimit } = require('../middleware/subscription');
 const { createEvent, getEvents, updateEvent, deleteEvent, formatEventsResponse } = require('../../services/eventService');
 
 /**
  * POST /api/events
  * Create a new event
- * Body: { title, date, time, duration_minutes?, description?, event_type? }
+ * Free: max 20 events | PRO: unlimited
  */
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', [authMiddleware, checkEventLimit], async (req, res) => {
   try {
-    const userId = req.user.id;
-    const event = await createEvent(userId, req.body);
+    const event = await createEvent(req.user.id, req.body);
     res.status(201).json({ success: true, event });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -20,19 +20,15 @@ router.post('/', authMiddleware, async (req, res) => {
 
 /**
  * GET /api/events
- * Get events list
- * Query params: date_from?, date_to?, event_type?
+ * Query params: date_from?, date_to?, event_type?, format?
  */
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
     const { date_from, date_to, event_type, format } = req.query;
-    const events = await getEvents(userId, { dateFrom: date_from, dateTo: date_to, eventType: event_type });
-    
+    const events = await getEvents(req.user.id, { dateFrom: date_from, dateTo: date_to, eventType: event_type });
     if (format === 'text') {
       return res.json({ success: true, response: formatEventsResponse(events), count: events.length });
     }
-    
     res.json({ success: true, events, count: events.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -40,13 +36,25 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 /**
+ * GET /api/events/today
+ * Convenience: Get today's events
+ */
+router.get('/today', authMiddleware, async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const events = await getEvents(req.user.id, { dateFrom: today, dateTo: today });
+    res.json({ success: true, events, formatted: formatEventsResponse(events) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * GET /api/events/:id
- * Get single event
  */
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const events = await getEvents(userId, {});
+    const events = await getEvents(req.user.id, {});
     const event = events.find(e => e.id === req.params.id);
     if (!event) return res.status(404).json({ error: 'Evento no encontrado' });
     res.json({ success: true, event });
@@ -57,13 +65,10 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
 /**
  * PUT /api/events/:id
- * Update an event
- * Body: { title?, date?, time?, duration_minutes?, description?, event_type? }
  */
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const event = await updateEvent(userId, req.params.id, req.body);
+    const event = await updateEvent(req.user.id, req.params.id, req.body);
     res.json({ success: true, event });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -72,12 +77,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
 /**
  * DELETE /api/events/:id
- * Soft-delete (cancel) an event
  */
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const result = await deleteEvent(userId, req.params.id);
+    const result = await deleteEvent(req.user.id, req.params.id);
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(400).json({ error: err.message });
