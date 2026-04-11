@@ -1,19 +1,25 @@
 require('dotenv').config();
-const express = require('express');
-const { Pool } = require('pg');
 const { startServer } = require('./src/api/server');
 const { initializeDatabase } = require('./src/db/database');
+const { startKeepAlive } = require('./src/keepAlive');
 const config = require('./src/config');
+
+if (!config.openai.apiKey) {
+  console.warn('⚠️  WARNING: OPENAI_API_KEY no configurada. El chat no funcionará hasta que la añadas.');
+}
 
 async function main() {
   console.log('\n🧠 Secretario IA — Backend Inteligente');
   console.log('─'.repeat(45));
   
-  // Initialize PostgreSQL database
+  // Initialize PostgreSQL database and run migrations
   await initializeDatabase();
   
   // Start Express server
   startServer();
+  
+  // Keep alive ping for free tier (prevents Render spin-down)
+  startKeepAlive(config.server.port);
   
   console.log('\n✅ Sistema operativo.\n');
 }
