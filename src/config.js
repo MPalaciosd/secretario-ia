@@ -1,62 +1,39 @@
 require('dotenv').config();
 
-const config = {
-  groq: {
-    apiKey: process.env.GROQ_API_KEY,
-    // llama-4-scout: último modelo de Meta en Groq, mejor soporte tool use (gratis)
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-  },
-
-  telegram: {
-    token: process.env.TELEGRAM_BOT_TOKEN,
-  },
-
+module.exports = {
   server: {
-    port: parseInt(process.env.PORT) || 3000,
+    port: process.env.PORT || 3000,
+    env: process.env.NODE_ENV || 'development'
   },
-
-  shop: {
-    name: process.env.SHOP_NAME || 'Barbería El Maestro',
-    assistantName: process.env.ASSISTANT_NAME || 'Alex',
-    phone: process.env.SHOP_PHONE || '',
-    address: process.env.SHOP_ADDRESS || '',
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY,
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    embeddingModel: 'text-embedding-3-small'
   },
-
-  schedule: {
-    startHour: process.env.BUSINESS_HOURS_START || '10:00',
-    endHour: process.env.BUSINESS_HOURS_END || '20:00',
-    // 0=Dom,1=Lun,...,6=Sáb
-    workingDays: (process.env.WORKING_DAYS || '1,2,3,4,5,6')
-      .split(',')
-      .map(Number),
-    slotInterval: parseInt(process.env.SLOT_INTERVAL) || 30,
+  database: {
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
   },
-
-  ai: {
-    maxHistoryMessages: parseInt(process.env.MAX_HISTORY_MESSAGES) || 20,
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    priceId: process.env.STRIPE_PRICE_ID
   },
-
-  // Catálogo de servicios — edita aquí para añadir/quitar servicios
-  services: {
-    corte: { name: 'Corte de cabello', duration: 30, price: 15 },
-    corte_barba: { name: 'Corte + Barba', duration: 45, price: 22 },
-    barba: { name: 'Arreglo de barba', duration: 20, price: 10 },
-    afeitado: { name: 'Afeitado clásico', duration: 25, price: 12 },
-    tinte: { name: 'Tinte', duration: 90, price: 40 },
-    decoloracion: { name: 'Decoloración', duration: 120, price: 60 },
-    keratina: { name: 'Keratina', duration: 150, price: 75 },
+  email: {
+    provider: process.env.EMAIL_PROVIDER || 'resend',
+    resendApiKey: process.env.RESEND_API_KEY,
+    sendgridApiKey: process.env.SENDGRID_API_KEY,
+    fromEmail: process.env.FROM_EMAIL || 'noreply@secretario-ia.com',
+    fromName: process.env.FROM_NAME || 'Secretario IA'
   },
+  jwt: {
+    secret: process.env.JWT_SECRET || 'change_this_in_production',
+    expiresIn: '7d'
+  },
+  app: {
+    name: 'Secretario IA',
+    version: '3.0.0',
+    maxConversationHistory: 20,
+    maxLongTermMemory: 100
+  }
 };
-
-// Pre-calcular minutos para el motor de disponibilidad
-config.schedule.startMinutes = (() => {
-  const [h, m] = config.schedule.startHour.split(':').map(Number);
-  return h * 60 + m;
-})();
-
-config.schedule.endMinutes = (() => {
-  const [h, m] = config.schedule.endHour.split(':').map(Number);
-  return h * 60 + m;
-})();
-
-module.exports = config;
