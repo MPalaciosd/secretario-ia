@@ -10,14 +10,16 @@
       theme: {
         extend: {
           colors: {
-            cream: '#F5F1ED',
-            panel: '#EAE7E3',
-            sidebar: '#D8D3CD',
-            wine: '#4A1F1F',
+            cream:    '#F5F1ED',
+            panel:    '#EAE7E3',
+            sidebar:  '#D8D3CD',
+            wine:     '#4A1F1F',
             'wine-light': '#7A4040',
-            sage: '#7BAA8B',
-            'sage-dark': '#5D8A6E',
-            border: '#C8C3BC'
+            // Accent: crimson/garnet instead of green
+            accent:      '#8B1A1A',
+            'accent-dark':'#6B0F0F',
+            'accent-light':'#C0392B',
+            border:   '#C8C3BC'
           },
           fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
         }
@@ -35,28 +37,33 @@
     .typing-dot { animation: typing 1.4s infinite; }
     .typing-dot:nth-child(2) { animation-delay: 0.2s; }
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes typing { 0%,60%,100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }
+    @keyframes typing {
+      0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
     .event-card:hover { transform: translateX(2px); }
     .event-card { transition: all 0.15s ease; }
     .fade-in { animation: fadeIn 0.3s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
     .modal-overlay { backdrop-filter: blur(4px); }
-    .gradient-sage { background: linear-gradient(135deg, #7BAA8B 0%, #5D8A6E 100%); }
-    .gradient-wine { background: linear-gradient(135deg, #4A1F1F 0%, #7A4040 100%); }
+    /* Crimson/Garnet gradient — replaces old sage gradient */
+    .gradient-accent {
+      background: linear-gradient(135deg, #8B1A1A 0%, #6B0F0F 100%);
+    }
+    .gradient-wine {
+      background: linear-gradient(135deg, #4A1F1F 0%, #7A4040 100%);
+    }
     input:focus, textarea:focus { outline: none; }
   </style>
 </head>
 <body class="h-screen overflow-hidden">
-
-<!-- ══════════════════════════════════════════════════════════
-     APP ROOT — React will mount here
-══════════════════════════════════════════════════════════ -->
-<div id="app"></div>
-
-<!-- React + Babel (production would use Vite build) -->
-<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="/app.js" type="text/babel"></script>
+  <div id="app"></div>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="/app.js" type="text/babel"></script>
 </body>
 </html>
