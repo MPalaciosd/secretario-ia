@@ -1,31 +1,32 @@
 {
   "name": "secretario-ia",
-  "version": "3.0.0",
-  "description": "Secretario IA — Agenda Inteligente con IA, PostgreSQL y OpenAI",
+  "version": "3.1.0",
+  "description": "Intelligent AI-powered agenda assistant — Groq edition",
   "main": "index.js",
-  "engines": {
-    "node": ">=20"
-  },
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js",
-    "db:migrate": "node src/db/migrate.js"
+    "dev":   "nodemon index.js",
+    "test":  "echo \"No tests yet\" && exit 0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.18.3",
-    "express-rate-limit": "^7.4.0",
-    "helmet": "^7.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "openai": "^4.28.0",
-    "pg": "^8.11.3",
-    "pg-pool": "^3.6.1",
-    "resend": "^3.2.0",
-    "stripe": "^15.12.0",
-    "uuid": "^9.0.0"
+    "express":         "^4.18.2",
+    "pg":              "^8.11.3",
+    "groq-sdk":        "^0.5.0",
+    "stripe":          "^14.21.0",
+    "resend":          "^2.1.0",
+    "jsonwebtoken":    "^9.0.2",
+    "bcryptjs":        "^2.4.3",
+    "uuid":            "^9.0.1",
+    "cors":            "^2.8.5",
+    "helmet":          "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "dotenv":          "^16.3.1",
+    "node-cron":       "^3.0.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.0.3"
   }
 }
