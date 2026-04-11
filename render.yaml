@@ -1,43 +1,42 @@
+# render.yaml — Secretario IA v3.0
+# Deploy config for Render.com
+
 services:
   - type: web
     name: secretario-ia
-    runtime: node
-    buildCommand: npm install
-    startCommand: node index.js
+    env: node
     plan: free
+    buildCommand: npm install
+    startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: MONGODB_URI
+      - key: DATABASE_URL
+        fromDatabase:
+          name: secretario-ia-db
+          property: connectionString
+      - key: OPENAI_API_KEY
         sync: false
-      - key: GROQ_API_KEY
-        sync: false
-      - key: SHOP_NAME
-        sync: false
-      - key: ASSISTANT_NAME
-        sync: false
-      - key: BUSINESS_HOURS_START
-        sync: false
-      - key: BUSINESS_HOURS_END
-        sync: false
-      - key: WORKING_DAYS
-        sync: false
-      - key: SLOT_INTERVAL
-        sync: false
-      - key: MAX_HISTORY_MESSAGES
-        sync: false
-      - key: APP_PUBLIC_URL
-        sync: false
-      - key: FRONTEND_URL
-        sync: false
-      - key: ALLOWED_ORIGINS
-        sync: false
+      - key: JWT_SECRET
+        generateValue: true
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
       - key: RESEND_API_KEY
         sync: false
-      - key: EMAIL_FROM
+      - key: FROM_EMAIL
         sync: false
+      - key: FROM_NAME
+        value: Secretario IA
+      - key: APP_URL
+        sync: false
+
+databases:
+  - name: secretario-ia-db
+    plan: free
+    databaseName: secretario_ia
+    user: secretario_ia_user
