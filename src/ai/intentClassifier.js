@@ -1,99 +1,134 @@
-const OpenAI = require('openai');
+const Groq = require('groq-sdk');
 const config = require('../config');
 
-const openai = new OpenAI({ apiKey: config.openai.apiKey });
+const groq = new Groq({ apiKey: config.groq.apiKey });
 
-/**
- * INTENT CLASSIFIER — First step in every conversation
- * Returns ALWAYS a structured JSON with intent, requirements and missing fields
- */
-async function classifyIntent(userMessage, conversationHistory = []) {
-  const systemPrompt = `Eres un clasificador de intenciones para un asistente personal de agenda inteligente.
-  
-  Analiza el mensaje del usuario y devuelve SIEMPRE un JSON con esta estructura exacta:
-  {
-    "intent": "crear_evento | crear_plan | consultar | modificar | eliminar | saludo | desconocido",
-    "confidence": 0.0-1.0,
-    "requires_data": true/false,
-    "missing_fields": [],
-    "extracted_data": {},
-    "user_message_summary": "resumen breve"
+// ─── Intent types ─────────────────────────────────────────────
+const INTENTS = {
+  CREAR_EVENTO:  'crear_evento',
+  CREAR_PLAN:    'crear_plan',
+  CONSULTAR:     'consultar',
+  MODIFICAR:     'modificar',
+  ELIMINAR:      'eliminar',
+  SALUDO:        'saludo',
+  OTRO:          'otro'
+};
+
+const SYSTEM_PROMPT = `Eres un clasificador de intenciones para una agenda inteligente.
+Analiza el mensaje del usuario y responde ÚNICAMENTE con JSON válido.
+
+Intenciones posibles:
+- crear_evento: crear cita, evento, recordatorio, reunión, médico, etc.
+- crear_plan: crear plan de entrenamiento, estudio, dieta, proyecto multi-semana
+- consultar: preguntar qué hay en la agenda, qué eventos tiene, disponibilidad
+- modificar: cambiar, mover, editar un evento existente
+- eliminar: borrar, cancelar un evento
+- saludo: hola, buenos días, gracias, conversación general
+- otro: cualquier otra cosa
+
+Responde SIEMPRE con este JSON exacto:
+{
+  "intent": "una_de_las_intenciones_anteriores",
+  "confidence": 0.0_a_1.0,
+  "requires_data": true_o_false,
+  "missing_fields": [],
+  "extracted_data": {}
+}
+
+Reglas para missing_fields:
+- crear_evento: requiere title, date. Si faltan → ponlos en missing_fields
+- crear_plan: requiere weeks, goal, level, sessions_per_week. Si faltan → ponlos
+- Si el usuario ya dio los datos → extracted_data con lo que dio, missing_fields vacío
+
+Ejemplos de extracted_data:
+- "dentista el viernes a las 11" → {"title":"Dentista","date":"viernes","time":"11:00"}
+- "plan 4 semanas 3 días fútbol" → {"weeks":4,"sessions_per_week":3,"goal":"fútbol","level":"intermedio"}
+`;
+
+async function classifyIntent(message, conversationHistory = []) {
+  if (!config.groq.apiKey) {
+    console.warn('[Intent] No GROQ_API_KEY set, using fallback classifier');
+    return fallbackClassify(message);
   }
-
-  REGLAS ESTRICTAS:
-  - "crear_evento": el usuario quiere añadir UNA sola cita/evento/tarea concreta
-    * Campos requeridos: title, date, time (o duration si aplica)
-    * Si falta date/time → missing_fields debe incluirlos
-    * Ejemplo: "Tengo dentista el jueves a las 10" → crear_evento
-  
-  - "crear_plan": el usuario quiere un programa de múltiples sesiones (entrenamiento, dieta, estudio, etc.)
-    * Campos requeridos: plan_type, weeks, goal, level, sessions_per_week
-    * NUNCA guardar un plan como evento único
-    * Ejemplo: "Montame un entrenamiento de 4 semanas" → crear_plan
-  
-  - "consultar": el usuario pregunta por su agenda, eventos o planes existentes
-    * Ejemplo: "¿Qué tengo mañana?" → consultar
-  
-  - "modificar": el usuario quiere cambiar un evento o plan existente
-    * Campos requeridos: event_id o identificación del evento, campo a modificar
-  
-  - "eliminar": el usuario quiere borrar un evento o plan
-  
-  - "saludo": saludo o conversación general
-  
-  Para extracted_data, extrae TODOS los datos mencionados:
-  {
-    "title": "nombre del evento",
-    "date": "fecha en formato ISO si se menciona",
-    "time": "hora si se menciona",
-    "duration_minutes": número si se menciona,
-    "plan_type": "entrenamiento|dieta|estudio|otro",
-    "weeks": número de semanas,
-    "goal": "objetivo del plan",
-    "level": "principiante|intermedio|avanzado",
-    "sessions_per_week": número de sesiones por semana,
-    "notes": "notas adicionales"
-  }
-  
-  SOLO devuelve el JSON, sin explicaciones ni markdown.`;
-
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    ...conversationHistory.slice(-5).map(m => ({ role: m.role, content: m.content })),
-    { role: 'user', content: userMessage }
-  ];
 
   try {
-    const response = await openai.chat.completions.create({
-      model: config.openai.model,
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT }
+    ];
+
+    // Add last 3 conversation turns for context
+    if (conversationHistory.length > 0) {
+      const recent = conversationHistory.slice(-6);
+      messages.push({
+        role: 'user',
+        content: `Contexto de conversación reciente:\n${recent.map(m => `${m.role}: ${m.content}`).join('\n')}`
+      });
+      messages.push({ role: 'assistant', content: 'Entendido, analizaré el siguiente mensaje con ese contexto.' });
+    }
+
+    messages.push({ role: 'user', content: message });
+
+    const response = await groq.chat.completions.create({
+      model:       config.groq.fastModel,
       messages,
       temperature: 0.1,
-      max_tokens: 500,
-      response_format: { type: 'json_object' }
+      max_tokens:  300
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
-    
-    // Validate required fields
-    if (!result.intent) result.intent = 'desconocido';
-    if (!result.requires_data) result.requires_data = false;
-    if (!result.missing_fields) result.missing_fields = [];
-    if (!result.extracted_data) result.extracted_data = {};
-    if (!result.confidence) result.confidence = 0.5;
+    const raw = response.choices[0].message.content.trim();
 
-    console.log('[IntentClassifier] Intent detected:', result.intent, '| Confidence:', result.confidence);
-    return result;
-  } catch (err) {
-    console.error('[IntentClassifier] Error:', err.message);
+    // Extract JSON even if there's extra text
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in response');
+
+    const result = JSON.parse(jsonMatch[0]);
+
+    // Validate required fields
+    if (!result.intent) throw new Error('Missing intent in response');
+
     return {
-      intent: 'desconocido',
-      confidence: 0,
-      requires_data: false,
-      missing_fields: [],
-      extracted_data: {},
-      user_message_summary: userMessage
+      intent:         result.intent         || INTENTS.OTRO,
+      confidence:     result.confidence     || 0.8,
+      requires_data:  result.requires_data  ?? false,
+      missing_fields: result.missing_fields || [],
+      extracted_data: result.extracted_data || {}
     };
+
+  } catch (err) {
+    console.error('[Intent] Groq classification error:', err.message);
+    return fallbackClassify(message);
   }
 }
 
-module.exports = { classifyIntent };
+// ─── Keyword-based fallback (no AI needed) ───────────────────
+function fallbackClassify(message) {
+  const lower = message.toLowerCase();
+
+  if (/\b(hola|buenos|buenas|gracias|ok|bien|genial)\b/.test(lower))
+    return { intent: INTENTS.SALUDO, confidence: 0.9, requires_data: false, missing_fields: [], extracted_data: {} };
+
+  if (/\b(plan|semanas?|entrenamiento|rutina|dieta|estudio|programa)\b/.test(lower))
+    return { intent: INTENTS.CREAR_PLAN, confidence: 0.8, requires_data: true,
+      missing_fields: ['weeks','goal','level','sessions_per_week'], extracted_data: {} };
+
+  if (/\b(borra|elimina|cancela|quita|suprime)\b/.test(lower))
+    return { intent: INTENTS.ELIMINAR, confidence: 0.85, requires_data: true,
+      missing_fields: ['event_id'], extracted_data: {} };
+
+  if (/\b(cambia|modifica|mueve|actualiza|edita)\b/.test(lower))
+    return { intent: INTENTS.MODIFICAR, confidence: 0.8, requires_data: true,
+      missing_fields: [], extracted_data: {} };
+
+  if (/\b(qué|que|cuándo|cuando|tengo|agenda|semana|hoy|mañana|próximo)\b/.test(lower))
+    return { intent: INTENTS.CONSULTAR, confidence: 0.8, requires_data: false,
+      missing_fields: [], extracted_data: {} };
+
+  if (/\b(crea|cita|evento|reunión|reunion|dentista|médico|medico|recordatorio|añade|agrega)\b/.test(lower))
+    return { intent: INTENTS.CREAR_EVENTO, confidence: 0.8, requires_data: true,
+      missing_fields: [], extracted_data: {} };
+
+  return { intent: INTENTS.OTRO, confidence: 0.5, requires_data: false,
+    missing_fields: [], extracted_data: {} };
+}
+
+module.exports = { classifyIntent, INTENTS };
