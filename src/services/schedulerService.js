@@ -1,5 +1,4 @@
 const { query } = require('../db/database');
-const { getLongTermMemory } = require('../ai/memoryService');
 
 /**
  * INTELLIGENT SCHEDULER SERVICE
