@@ -4,108 +4,112 @@ const config = require('../../config');
 
 /**
  * JWT Authentication Middleware
- * Verifies the JWT token and attaches user to req.user
- * Supports Bearer token in Authorization header or x-user-id header for dev
+ * Verifies Bearer token — no dev bypasses, no x-user-id header
  */
 async function authMiddleware(req, res, next) {
-  try {
-    // Development bypass: allow userId in header (ONLY in dev mode)
-    if (process.env.NODE_ENV === 'development' && req.headers['x-user-id']) {
-      const userId = req.headers['x-user-id'];
-      const userResult = await query('SELECT * FROM users WHERE id = $1', [userId]);
-      if (userResult.rows.length) {
-        req.user = userResult.rows[0];
-        return next();
-      }
-    }
-    
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Token de autorización requerido' });
-    }
-    
-    const token = authHeader.substring(7);
-    
-    let decoded;
     try {
-      decoded = jwt.verify(token, config.jwt.secret);
-    } catch (err) {
-      if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({ error: 'Token expirado, por favor vuelve a iniciar sesión' });
+          const authHeader = req.headers.authorization;
+          if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                  return res.status(401).json({ error: 'Token de autorización requerido' });
+          }
+
+      const token = authHeader.substring(7);
+
+      // Guard against oversized token payloads
+      if (token.length > 512) {
+              return res.status(401).json({ error: 'Token inválido' });
       }
-      return res.status(401).json({ error: 'Token inválido' });
+
+      let decoded;
+          try {
+                  decoded = jwt.verify(token, config.jwt.secret);
+          } catch (err) {
+                  if (err.name === 'TokenExpiredError') {
+                            return res.status(401).json({ error: 'Token expirado. Por favor vuelve a iniciar sesión.' });
+                  }
+                  return res.status(401).json({ error: 'Token inválido' });
+          }
+
+      const userId = decoded.userId || decoded.id;
+          if (!userId) {
+                  return res.status(401).json({ error: 'Token malformado' });
+          }
+
+      // Only select necessary columns — never SELECT *
+      const userResult = await query(
+              'SELECT id, email, name, timezone, subscription_status FROM users WHERE id = $1',
+              [userId]
+            );
+
+      if (!userResult.rows.length) {
+              return res.status(401).json({ error: 'Usuario no encontrado' });
+      }
+
+      req.user = userResult.rows[0];
+          next();
+    } catch (err) {
+          console.error('[Auth] Middleware error:', err.message);
+          return res.status(500).json({ error: 'Error de autenticación' });
     }
-    
-    // Verify user exists in DB
-    const userResult = await query(
-      'SELECT id, email, name, timezone, subscription_status FROM users WHERE id = $1',
-      [decoded.userId || decoded.id]
-    );
-    
-    if (!userResult.rows.length) {
-      return res.status(401).json({ error: 'Usuario no encontrado' });
-    }
-    
-    req.user = userResult.rows[0];
-    next();
-  } catch (err) {
-    console.error('[Auth] Middleware error:', err.message);
-    return res.status(500).json({ error: 'Error de autenticación' });
-  }
 }
 
 /**
- * Optional auth middleware — doesn't block if no token, but attaches user if present
+ * Optional auth — attaches user if valid token present, never blocks
  */
 async function optionalAuth(req, res, next) {
-  try {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      const decoded = jwt.verify(token, config.jwt.secret);
-      const userResult = await query(
-        'SELECT id, email, name, timezone, subscription_status FROM users WHERE id = $1',
-        [decoded.userId || decoded.id]
-      );
-      if (userResult.rows.length) {
-        req.user = userResult.rows[0];
-      }
+    try {
+          const authHeader = req.headers.authorization;
+          if (authHeader && authHeader.startsWith('Bearer ')) {
+                  const token = authHeader.substring(7);
+                  if (token.length <= 512) {
+                            const decoded = jwt.verify(token, config.jwt.secret);
+                            const userId = decoded.userId || decoded.id;
+                            if (userId) {
+                                        const userResult = await query(
+                                                      'SELECT id, email, name, timezone, subscription_status FROM users WHERE id = $1',
+                                                      [userId]
+                                                    );
+                                        if (userResult.rows.length) {
+                                                      req.user = userResult.rows[0];
+                                        }
+                            }
+                  }
+          }
+    } catch (err) {
+          // Silent fail — optional auth never blocks the request
     }
-  } catch (err) {
-    // Silent fail for optional auth
-  }
-  next();
+    next();
 }
 
 /**
- * Check if user has active subscription
+       * Require active subscription (PRO or trial)
  */
 function requireSubscription(req, res, next) {
-  if (!req.user) {
-    return res.status(401).json({ error: 'No autenticado' });
-  }
-  
-  if (req.user.subscription_status !== 'active' && req.user.subscription_status !== 'trial') {
-    return res.status(403).json({ 
-      error: 'Suscripción requerida',
-      message: 'Esta funcionalidad requiere una suscripción activa',
-      upgrade_url: '/api/stripe/checkout'
-    });
-  }
-  
-  next();
+    if (!req.user) {
+          return res.status(401).json({ error: 'No autenticado' });
+    }
+    if (req.user.subscription_status !== 'active' && req.user.subscription_status !== 'trial') {
+          return res.status(403).json({
+                  error: 'Suscripción requerida',
+                  message: 'Esta funcionalidad requiere una suscripción activa',
+                  upgrade_url: '/api/stripe/checkout'
+          });
+    }
+    next();
 }
 
 /**
- * Generate JWT token for a user
+ * Generate JWT token — fails hard if secret is insecure
  */
 function generateToken(userId) {
-  return jwt.sign(
-    { userId, id: userId },
-    config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn }
-  );
+    if (!config.jwt.secret || config.jwt.secret === 'dev-secret-change-in-production') {
+          throw new Error('[FATAL] JWT_SECRET not properly configured');
+    }
+    return jwt.sign(
+      { userId },
+          config.jwt.secret,
+      { expiresIn: '7d' }  // Reduced from 30d to 7d
+        );
 }
 
 module.exports = { authMiddleware, optionalAuth, requireSubscription, generateToken };
