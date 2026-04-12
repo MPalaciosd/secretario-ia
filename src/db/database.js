@@ -126,6 +126,16 @@ async function runMigrations(client) {
       )
     `);
 
+
+    // ── Safe column additions (idempotent ALTER TABLE IF NOT EXISTS) ──
+    await client.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'`);
+    await client.query(`ALTER TABLE plans ADD COLUMN IF NOT EXISTS schedule JSONB DEFAULT '{}'`);
+    await client.query(`ALTER TABLE plans ADD COLUMN IF NOT EXISTS week_structure JSONB DEFAULT '{}'`);
+    await client.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'`);
+    await client.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS week_number INTEGER`).catch(()=>{});
+    await client.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS session_number INTEGER`).catch(()=>{});
+    await client.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS plan_id UUID`).catch(()=>{});
+
     console.log('[DB] ✅ Migrations completed');
   } catch (err) {
     console.error('[DB] Migration error:', err.message);
