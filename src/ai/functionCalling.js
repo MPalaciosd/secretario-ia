@@ -109,32 +109,78 @@ const TOOLS = [
   }
 ];
 
-// ─── Date resolver ────────────────────────────────────────────
+// ─── Date resolver — handles Spanish date expressions ───────
 function resolveDate(dateStr) {
   if (!dateStr) return new Date().toISOString().split('T')[0];
   const lower = dateStr.toLowerCase().trim();
   const now   = new Date();
-  const dayMap = { lunes:1, martes:2, 'miércoles':3, miercoles:3, jueves:4, viernes:5, 'sábado':6, sabado:6, domingo:0 };
 
+  // Already a YYYY-MM-DD date
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+
+  // Relative: hoy, mañana, pasado mañana
   if (lower === 'hoy') return now.toISOString().split('T')[0];
-  if (lower === 'mañana' || lower === 'manana') { now.setDate(now.getDate() + 1); return now.toISOString().split('T')[0]; }
-  if (lower === 'pasado mañana' || lower === 'pasado manana') { now.setDate(now.getDate() + 2); return now.toISOString().split('T')[0]; }
+  if (lower === 'mañana' || lower === 'manana') {
+    const d = new Date(now); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0];
+  }
+  if (lower.includes('pasado')) {
+    const d = new Date(now); d.setDate(d.getDate() + 2); return d.toISOString().split('T')[0];
+  }
 
-  for (const [name, dayNum] of Object.entries(dayMap)) {
-    if (lower.includes(name)) {
-      const current = now.getDay();
-      let diff = dayNum - current;
-      if (diff <= 0) diff += 7;
-      now.setDate(now.getDate() + diff);
-      return now.toISOString().split('T')[0];
+  // Spanish month names → number
+  const MONTHS = {
+    enero:1, febrero:2, marzo:3, abril:4, mayo:5, junio:6,
+    julio:7, agosto:8, septiembre:9, octubre:10, noviembre:11, diciembre:12
+  };
+
+  // "el 30 de abril", "30 de abril", "el 5 de mayo de 2026", "30/04", "30/04/2026"
+  const dateMonthMatch = lower.match(/(\d{1,2})\s+de\s+(\w+)(?:\s+(?:de\s+)?(\d{4}))?/);
+  if (dateMonthMatch) {
+    const day   = parseInt(dateMonthMatch[1]);
+    const month = MONTHS[dateMonthMatch[2]];
+    const year  = dateMonthMatch[3] ? parseInt(dateMonthMatch[3]) : now.getFullYear();
+    if (month && day >= 1 && day <= 31) {
+      const target = new Date(year, month - 1, day);
+      // If date already passed this year and no year specified, use next year
+      if (!dateMonthMatch[3] && target < now && target.getMonth() < now.getMonth()) {
+        target.setFullYear(year + 1);
+      }
+      return target.toISOString().split('T')[0];
     }
   }
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  // "30/04" or "30/04/2026"
+  const slashMatch = lower.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?/);
+  if (slashMatch) {
+    const day   = parseInt(slashMatch[1]);
+    const month = parseInt(slashMatch[2]);
+    const year  = slashMatch[3] ? parseInt(slashMatch[3]) : now.getFullYear();
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return new Date(year, month - 1, day).toISOString().split('T')[0];
+    }
+  }
+
+  // Day names: "el próximo lunes", "el viernes", "este martes"
+  const DAY_MAP = { lunes:1, martes:2, 'miércoles':3, miercoles:3, jueves:4, viernes:5, 'sábado':6, sabado:6, domingo:0 };
+  for (const [name, dayNum] of Object.entries(DAY_MAP)) {
+    if (lower.includes(name)) {
+      const d = new Date(now);
+      let diff = dayNum - d.getDay();
+      if (diff <= 0) diff += 7;
+      d.setDate(d.getDate() + diff);
+      return d.toISOString().split('T')[0];
+    }
+  }
+
+  // Fallback: try JS native parse
   const parsed = new Date(dateStr);
   if (!isNaN(parsed)) return parsed.toISOString().split('T')[0];
+
+  // Last resort: return today (log warning)
+  console.warn('[resolveDate] Could not parse date:', dateStr, '→ using today');
   return now.toISOString().split('T')[0];
 }
+
 
 // ─── Main: ask Groq which function to call ───────────────────
 async function processFunctionCall(intent, message, extractedData = {}, history = [], userId) {
