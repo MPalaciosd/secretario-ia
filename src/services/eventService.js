@@ -55,6 +55,38 @@ async function createEvent(userId, data) {
     ? new Date(startTime.getTime() + data.duration_minutes * 60 * 1000)
     : null;
   
+  // Check for conflicts — log warning but DO NOT block creation
+  const conflictCheck = await query(
+    `SELECT id, title, start_time FROM events 
+     WHERE user_id = $1 
+     AND status != 'cancelled'
+     AND start_time BETWEEN $2 AND $3`,
+    [userId, 
+     new Date(startTime.getTime() - 30 * 60 * 1000).toISOString(),
+     endTime ? endTime.toISOString() : new Date(startTime.getTime() + 60 * 60 * 1000).toISOString()]
+  );
+  if (conflictCheck.rows.length > 0) {
+    const conflict = conflictCheck.rows[0];
+    console.warn('[EventService] Overlap with "' + conflict.title + '" — creating anyway');
+  }
+  
+  // Parse datetime
+  const startTime = new Date(`${data.date}T${data.time}:00`);
+  
+  if (isNaN(startTime.getTime())) {
+    throw new Error('Fecha u hora inválida');
+  }
+  
+  // Check if date is in the past
+  if (startTime < new Date()) {
+    // Allow events in the past for historical logging but warn
+    console.warn('[EventService] Creating event in the past:', startTime);
+  }
+  
+  const endTime = data.duration_minutes 
+    ? new Date(startTime.getTime() + data.duration_minutes * 60 * 1000)
+    : null;
+  
   // Check for conflicts
   const conflictCheck = await query(
     `SELECT id, title, start_time FROM events 
