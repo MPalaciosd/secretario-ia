@@ -1,7 +1,8 @@
 require('dotenv').config();
+
 const { initializeDatabase } = require('./src/db/database');
-const { createServer }       = require('./src/api/server');
-const { startKeepAlive }     = require('./src/keepAlive');
+const { startServer } = require('./src/api/server');
+const { startKeepAlive } = require('./src/keepAlive');
 const config = require('./src/config');
 
 async function main() {
@@ -9,6 +10,7 @@ async function main() {
   if (!config.groq.apiKey) {
     console.warn('⚠️  WARNING: GROQ_API_KEY no configurada. El chat IA no funcionará hasta que la añadas en Render > Environment.');
   }
+
   if (!config.database.url) {
     console.error('[FATAL] DATABASE_URL no configurada. El servidor no puede arrancar.');
     process.exit(1);
@@ -25,16 +27,8 @@ async function main() {
     process.exit(1);
   }
 
-  // ── Start HTTP server ─────────────────────────────────────
-  const app  = createServer();
-  const port = config.port;
-
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`✅ Server running on port ${port}`);
-    console.log(`🌐 URL: ${config.app.url}`);
-    console.log(`🤖 AI:  Groq / ${config.groq.model}`);
-    console.log(`🗄️  DB:  PostgreSQL connected`);
-  });
+  // ── Start HTTP server (startServer handles app.listen internally) ──
+  startServer();
 
   // ── Keep-alive ping (prevent Render free tier spin-down) ──
   if (process.env.NODE_ENV === 'production') {
