@@ -11,20 +11,20 @@ const config = require('../../config');
 
 const groq = new Groq({ apiKey: config.groq.apiKey });
 
-// ─── Maximum message length to prevent abuse and excessive API costs ──
+// ─── Maximum message length to prevent abuse ──────────────────────────
 const MAX_MESSAGE_LENGTH = 2000;
 
-// ─── Questions for missing fields ──────────────────────────────
+// ─── Questions for missing fields ─────────────────────────────────────
 const MISSING_FIELD_QUESTIONS = {
-  title: 'Como se llama el evento?',
-  date: 'Para que dia es? (ej: "el proximo lunes", "el 15 de mayo")',
-  time: 'A que hora? (ej: "a las 10:00", "por la tarde")',
-  duration_minutes: 'Cuanto tiempo durara el evento?',
-  weeks: 'Cuantas semanas quieres que dure el plan?',
-  goal: 'Cual es tu objetivo? (ej: perder peso, ganar musculo, mejorar resistencia)',
-  level: 'Cual es tu nivel? (principiante, intermedio, avanzado)',
-  sessions_per_week: 'Cuantas sesiones por semana puedes hacer?',
-  plan_type: 'Que tipo de plan quieres? (entrenamiento, dieta, estudio)'
+  title:                'Como se llama el evento?',
+  date:                 'Para que dia es? (ej: "el proximo lunes", "el 15 de mayo")',
+  time:                 'A que hora? (ej: "a las 10:00", "por la tarde")',
+  duration_minutes:     'Cuanto tiempo durara el evento?',
+  weeks:                'Cuantas semanas quieres que dure el plan?',
+  goal:                 'Cual es tu objetivo? (ej: perder peso, ganar musculo, mejorar resistencia)',
+  level:                'Cual es tu nivel? (principiante, intermedio, avanzado)',
+  sessions_per_week:    'Cuantas sesiones por semana puedes hacer?',
+  plan_type:            'Que tipo de plan quieres? (entrenamiento, dieta, estudio)',
 };
 
 function buildMissingDataQuestion(missingFields) {
@@ -36,7 +36,7 @@ function buildMissingDataQuestion(missingFields) {
   return 'Necesito algunos datos mas:\n' + questions.map((q, i) => (i + 1) + '. ' + q).join('\n');
 }
 
-// ─── Execute function call ──────────────────────────────────────
+// ─── Execute function call ─────────────────────────────────────────────
 async function executeFunctionCall(functionName, args, userId, userEmail, userName) {
   switch (functionName) {
     case 'createEvent': {
@@ -54,19 +54,19 @@ async function executeFunctionCall(functionName, args, userId, userEmail, userNa
     case 'schedulePlan': {
       const { plan_id, start_date, preferred_days, preferred_time } = args;
       const sessions = await schedulePlan(userId, plan_id, {
-        startDate: start_date || new Date().toISOString().split('T')[0],
-        preferredDays: preferred_days || ['lunes','miercoles','viernes'],
-        preferredTime: preferred_time || '07:00'
+        startDate:     start_date     || new Date().toISOString().split('T')[0],
+        preferredDays: preferred_days || ['lunes', 'miercoles', 'viernes'],
+        preferredTime: preferred_time || '07:00',
       });
-      const summary = formatScheduleSummary(sessions);
-      const planRes = await query('SELECT * FROM plans WHERE id = $1 AND user_id = $2', [plan_id, userId]);
+      const summary  = formatScheduleSummary(sessions);
+      const planRes  = await query('SELECT * FROM plans WHERE id = $1 AND user_id = $2', [plan_id, userId]);
       if (planRes.rows.length) sendPlanCreatedEmail(userEmail, userName, planRes.rows[0], sessions.length).catch(console.error);
       return { success: true, data: { sessions, count: sessions.length }, message: summary };
     }
     case 'getEvents': {
       const { date_from, date_to, event_type } = args;
-      const from = date_from || new Date().toISOString().split('T')[0];
-      const to = date_to || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+      const from   = date_from || new Date().toISOString().split('T')[0];
+      const to     = date_to   || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
       const events = await getEvents(userId, { dateFrom: from, dateTo: to, eventType: event_type });
       return { success: true, data: events, message: formatEventsResponse(events) };
     }
@@ -84,7 +84,7 @@ async function executeFunctionCall(functionName, args, userId, userEmail, userNa
   }
 }
 
-// ─── Generate conversational response ─────────────────────────
+// ─── Generate conversational response ─────────────────────────────────
 async function generateConversationalResponse(userMessage, context, functionResult = null) {
   if (!config.groq.apiKey) {
     if (functionResult?.message) return functionResult.message;
@@ -92,7 +92,8 @@ async function generateConversationalResponse(userMessage, context, functionResu
   }
   try {
     const today = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const systemPrompt = 'Eres Secretario IA, un asistente personal de agenda amigable y eficiente. Hablas en espanol de manera natural y cercana. Hoy es: ' + today + '. ' +
+    const systemPrompt =
+      'Eres Secretario IA, un asistente personal de agenda amigable y eficiente. Hablas en espanol de manera natural y cercana. Hoy es: ' + today + '. ' +
       (context.contextSummary ? 'Contexto del usuario:\n' + context.contextSummary : '') +
       (functionResult ? ' Accion completada: ' + JSON.stringify(functionResult.data) : '') +
       ' Responde de forma concisa. Usa emojis ocasionalmente. Se util y proactivo.';
@@ -102,9 +103,14 @@ async function generateConversationalResponse(userMessage, context, functionResu
     const messages = [
       { role: 'system', content: systemPrompt },
       ...context.shortTermMemory.slice(-6).map(m => ({ role: m.role, content: m.content })),
-      { role: 'user', content: userMessage }
+      { role: 'user', content: userMessage },
     ];
-    const response = await groq.chat.completions.create({ model: config.groq.model, messages, temperature: 0.8, max_tokens: 400 });
+    const response = await groq.chat.completions.create({
+      model: config.groq.model,
+      messages,
+      temperature: 0.8,
+      max_tokens: 400,
+    });
     return response.choices[0].message.content;
   } catch (err) {
     console.error('[Chat] generateConversationalResponse error:', err.message);
@@ -113,20 +119,17 @@ async function generateConversationalResponse(userMessage, context, functionResu
   }
 }
 
-// ─── MAIN CHAT HANDLER ──────────────────────────────────────────
-async function processChat(req, res) {
+// ─── MAIN CHAT HANDLER ────────────────────────────────────────────────
+async function processChat(req, res, next) {
   const { message } = req.body;
   const userId = req.user?.id;
 
   if (!message || typeof message !== 'string' || message.trim() === '') {
     return res.status(400).json({ error: 'El mensaje no puede estar vacio' });
   }
-
-  // Enforce message length limit to prevent API abuse and cost attacks
   if (message.length > MAX_MESSAGE_LENGTH) {
     return res.status(400).json({ error: 'El mensaje no puede superar ' + MAX_MESSAGE_LENGTH + ' caracteres' });
   }
-
   if (!userId) {
     return res.status(401).json({ error: 'Usuario no autenticado' });
   }
@@ -139,33 +142,39 @@ async function processChat(req, res) {
       console.log('[Chat] User: ' + userId + ' | Len: ' + message.length);
     }
 
-    const userContext = await buildUserContext(userId);
+    const userContext  = await buildUserContext(userId);
     const intentResult = await classifyIntent(message, userContext.shortTermMemory);
 
     if (intentResult.requires_data && intentResult.missing_fields?.length > 0) {
       const question = buildMissingDataQuestion(intentResult.missing_fields);
-      await saveMessage(userId, 'user', message, { intent: intentResult.intent });
+      await saveMessage(userId, 'user',      message,  { intent: intentResult.intent });
       await saveMessage(userId, 'assistant', question);
       return res.json({
-        success: true, response: question, intent: intentResult.intent,
-        missing_fields: intentResult.missing_fields, requires_more_info: true
+        success:          true,
+        response:         question,
+        intent:           intentResult.intent,
+        missing_fields:   intentResult.missing_fields,
+        requires_more_info: true,
       });
     }
 
     let assistantResponse = '';
-    let functionResult = null;
+    let functionResult    = null;
 
-    if (['crear_evento','crear_plan','consultar','modificar','eliminar'].includes(intentResult.intent)) {
+    if (['crear_evento', 'crear_plan', 'consultar', 'modificar', 'eliminar'].includes(intentResult.intent)) {
       try {
         const functionCall = await processFunctionCall(
-          intentResult.intent, message, intentResult.extracted_data,
-          userContext.shortTermMemory, userId
+          intentResult.intent,
+          message,
+          intentResult.extracted_data,
+          userContext.shortTermMemory,
+          userId
         );
         if (functionCall) {
-          const userRow = await query('SELECT email, name FROM users WHERE id = $1', [userId]);
+          const userRow   = await query('SELECT email, name FROM users WHERE id = $1', [userId]);
           const userEmail = userRow.rows[0]?.email;
-          const userName = userRow.rows[0]?.name;
-          functionResult = await executeFunctionCall(functionCall.functionName, functionCall.arguments, userId, userEmail, userName);
+          const userName  = userRow.rows[0]?.name;
+          functionResult  = await executeFunctionCall(functionCall.functionName, functionCall.arguments, userId, userEmail, userName);
           assistantResponse = functionResult.message;
           if (functionResult.requiresSchedule) {
             assistantResponse += '\n\n💡 Cuando prefieres entrenar? Dime los dias y hora y lo programare en tu calendario.';
@@ -181,19 +190,48 @@ async function processChat(req, res) {
       assistantResponse = await generateConversationalResponse(message, userContext, functionResult);
     }
 
-    await saveMessage(userId, 'user', message, { intent: intentResult.intent });
+    await saveMessage(userId, 'user',      message,          { intent: intentResult.intent });
     await saveMessage(userId, 'assistant', assistantResponse, { functionCalled: functionResult?.functionName });
     await extractAndUpdateMemory(userId, message, intentResult.intent, intentResult.extracted_data);
 
     return res.json({
-      success: true, response: assistantResponse,
-      intent: intentResult.intent, confidence: intentResult.confidence,
-      function_called: !!functionResult, data: functionResult?.data || null
+      success:        true,
+      response:       assistantResponse,
+      intent:         intentResult.intent,
+      confidence:     intentResult.confidence,
+      function_called: !!functionResult,
+      data:           functionResult?.data || null,
     });
   } catch (err) {
-    console.error('[Chat] Critical error:', err.message);
-    return res.status(500).json({ error: 'Error interno del servidor' });
+    next(err);
   }
 }
 
-module.exports = { processChat };
+// ─── GET /api/chat/history ─────────────────────────────────────────────
+async function getChatHistory(req, res, next) {
+  try {
+    const result = await query(
+      `SELECT role, content, intent, function_called, created_at
+       FROM conversations
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [req.user.id]
+    );
+    res.json({ success: true, messages: result.rows.reverse() });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── DELETE /api/chat/history ──────────────────────────────────────────
+async function deleteChatHistory(req, res, next) {
+  try {
+    await query('DELETE FROM conversations WHERE user_id = $1', [req.user.id]);
+    res.json({ success: true, message: 'Historial eliminado' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { processChat, getChatHistory, deleteChatHistory };
