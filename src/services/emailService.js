@@ -1,11 +1,11 @@
 const { Resend } = require('resend');
 
-// Instancia con placeholder si no hay clave — send() lo detecta y loguea sin romper
+// ─── Instancia con placeholder si no hay clave — send() lo detecta y loguea sin romper
 const resend = new Resend(process.env.RESEND_API_KEY || 'placeholder');
-const FROM     = process.env.EMAIL_FROM  || 'noreply@secretario-ia.com';
-const APP_NAME = process.env.SHOP_NAME   || 'Secretario IA';
+const FROM      = process.env.EMAIL_FROM  || 'noreply@secretario-ia.com';
+const APP_NAME  = process.env.SHOP_NAME   || 'Secretario IA';
 
-// ─── Helper: envía sin romper si Resend no está configurado ───
+// ─── Helper: envía sin romper si Resend no está configurado ────────────
 async function send(to, subject, html) {
   if (!process.env.RESEND_API_KEY) {
     console.warn(`[Email] RESEND_API_KEY no configurada. Email no enviado a ${to}: ${subject}`);
@@ -20,7 +20,7 @@ async function send(to, subject, html) {
   }
 }
 
-// ─── Base template ─────────────────────────────────────────────
+// ─── Base template ─────────────────────────────────────────────────────
 function baseTemplate(content) {
   return `<!DOCTYPE html>
 <html lang="es">
@@ -32,6 +32,7 @@ function baseTemplate(content) {
   .header h1 { color:#fff; margin:0; font-size:28px; }
   .body { padding:32px; color:#333; line-height:1.6; }
   .btn { display:inline-block; background:#8B1A1A; color:#fff; text-decoration:none; padding:12px 28px; border-radius:8px; font-weight:600; margin:16px 0; }
+  .otp-box { font-size:40px; font-weight:bold; letter-spacing:10px; color:#4f46e5; background:#f0f0ff; padding:24px; text-align:center; border-radius:10px; margin:24px 0; }
   .footer { background:#f9f9f9; padding:16px 32px; text-align:center; color:#888; font-size:12px; }
 </style></head>
 <body><div class="container">
@@ -41,11 +42,40 @@ function baseTemplate(content) {
 </div></body></html>`;
 }
 
-// ─── Email: evento creado ──────────────────────────────────────
+// ─── Email: OTP de acceso ──────────────────────────────────────────────
+async function sendOTPEmail(to, name, otp) {
+  if (!to || !otp) return;
+  const html = baseTemplate(`
+    <h2>Hola, ${name || 'usuario'} 👋</h2>
+    <p>Tu código de acceso a <strong>${APP_NAME}</strong> es:</p>
+    <div class="otp-box">${otp}</div>
+    <p style="color:#666;">Este código expira en <strong>15 minutos</strong>.</p>
+    <p style="color:#666;">Si no solicitaste este código, ignora este mensaje.</p>
+  `);
+  await send(to, `${otp} es tu código de acceso — ${APP_NAME}`, html);
+}
+
+// ─── Email: bienvenida ────────────────────────────────────────────────
+async function sendWelcome(to, name) {
+  const html = baseTemplate(`
+    <h2>¡Bienvenido/a a ${APP_NAME}, ${name}! 👋</h2>
+    <p>Tu cuenta está lista. Puedes empezar a organizar tu agenda y crear planes de entrenamiento ahora mismo.</p>
+  `);
+  await send(to, `¡Bienvenido/a a ${APP_NAME}!`, html);
+}
+
+// Alias para compatibilidad con authRoutes que llama sendWelcomeEmail
+const sendWelcomeEmail = sendWelcome;
+
+// ─── Email: evento creado ─────────────────────────────────────────────
 async function sendEventCreatedEmail(to, name, event) {
   if (!to || !event) return;
-  const dateStr = new Date(event.start_time).toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-  const timeStr = new Date(event.start_time).toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+  const dateStr = new Date(event.start_time).toLocaleDateString('es-ES', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+  const timeStr = new Date(event.start_time).toLocaleTimeString('es-ES', {
+    hour: '2-digit', minute: '2-digit'
+  });
   const html = baseTemplate(`
     <h2>📅 Evento creado, ${name || 'usuario'}!</h2>
     <p>Tu evento ha sido añadido a la agenda:</p>
@@ -59,7 +89,7 @@ async function sendEventCreatedEmail(to, name, event) {
   await send(to, `📅 Evento creado: ${event.title}`, html);
 }
 
-// ─── Email: plan creado ───────────────────────────────────────
+// ─── Email: plan creado ───────────────────────────────────────────────
 async function sendPlanCreatedEmail(to, name, plan, sessionsCount = 0) {
   if (!to || !plan) return;
   const html = baseTemplate(`
@@ -76,22 +106,13 @@ async function sendPlanCreatedEmail(to, name, plan, sessionsCount = 0) {
   await send(to, `🏋️ Tu plan está listo: ${plan.title}`, html);
 }
 
-// ─── Email: bienvenida ────────────────────────────────────────
-async function sendWelcome(to, name) {
-  const html = baseTemplate(`
-    <h2>¡Bienvenido/a a ${APP_NAME}, ${name}! 👋</h2>
-    <p>Tu cuenta está lista. Puedes empezar a organizar tu agenda y crear planes de entrenamiento ahora mismo.</p>
-  `);
-  await send(to, `¡Bienvenido/a a ${APP_NAME}!`, html);
-}
-
-// ─── Email: suscripción (alias genérico para stripeService) ───
+// ─── Email: suscripción (alias genérico para stripeService) ──────────
 async function sendSubscriptionEmail(to, name, subject, message) {
   const html = baseTemplate(`<h2>${subject}</h2><p>Hola ${name || 'usuario'},</p><p>${message}</p>`);
   await send(to, subject, html);
 }
 
-// ─── Email: pago confirmado ───────────────────────────────────
+// ─── Email: pago confirmado ───────────────────────────────────────────
 async function sendPaymentConfirmation(to, name, planName, amount) {
   const html = baseTemplate(`
     <h2>Pago confirmado ✅</h2>
@@ -101,7 +122,7 @@ async function sendPaymentConfirmation(to, name, planName, amount) {
   await send(to, `Confirmación de pago — ${planName}`, html);
 }
 
-// ─── Email: pago fallido ──────────────────────────────────────
+// ─── Email: pago fallido ──────────────────────────────────────────────
 async function sendPaymentFailed(to, name) {
   const html = baseTemplate(`
     <h2>Problema con tu pago ⚠️</h2>
@@ -110,7 +131,7 @@ async function sendPaymentFailed(to, name) {
   await send(to, 'Acción requerida: problema con tu pago', html);
 }
 
-// ─── Email: cancelación ───────────────────────────────────────
+// ─── Email: cancelación ───────────────────────────────────────────────
 async function sendCancellationConfirmation(to, name) {
   const html = baseTemplate(`
     <h2>Suscripción cancelada</h2>
@@ -120,9 +141,11 @@ async function sendCancellationConfirmation(to, name) {
 }
 
 module.exports = {
+  sendOTPEmail,
+  sendWelcome,
+  sendWelcomeEmail,           // alias — usado en authRoutes
   sendEventCreatedEmail,
   sendPlanCreatedEmail,
-  sendWelcome,
   sendSubscriptionEmail,
   sendPaymentConfirmation,
   sendPaymentFailed,
