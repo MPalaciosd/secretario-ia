@@ -516,7 +516,7 @@ async function formatEventsResponse(events, timezone) {
       const time     = formatLocalTime(new Date(event.start_time), tz);
       const duration = event.duration_minutes ? ` (${event.duration_minutes} min)` : '';
       const typeIcon = { medico:'🏥', reunion:'💼', deporte:'🏃', personal:'👤', trabajo:'💻' }[event.event_type] || '📌';
-      response += `  ${typeIcon} ${time} — **${event.title}`${duration}\n`;
+      response += `  ${typeIcon} ${time} — **${event.title}**${duration}\n`;
     }
     response += '\n';
   }
