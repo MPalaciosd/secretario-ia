@@ -10,18 +10,33 @@
       theme: {
         extend: {
           colors: {
-            cream:    '#F5F1ED',
-            panel:    '#EAE7E3',
-            sidebar:  '#D8D3CD',
-            wine:     '#4A1F1F',
-            'wine-light': '#7A4040',
-            // Accent: crimson/garnet instead of green
-            accent:      '#8B1A1A',
-            'accent-dark':'#6B0F0F',
-            'accent-light':'#C0392B',
-            border:   '#C8C3BC'
+            /* ── Paleta Beige + Granate Premium ── */
+            cream:        '#FAF7F4',
+            'cream-dark': '#F2EDE8',
+            panel:        '#EDE8E2',
+            'panel-dark': '#E2DBD3',
+            sidebar:      '#1E0A0A',
+            'sidebar-mid':'#2D1010',
+            wine:         '#3D0C0C',
+            'wine-mid':   '#6B1E1E',
+            'wine-light': '#9B4040',
+            accent:       '#8B1A1A',
+            'accent-dark':'#5C0F0F',
+            'accent-light':'#B84444',
+            gold:         '#C9A96E',
+            'gold-light': '#E8CFA0',
+            border:       '#D4CCC4',
+            'border-dark':'#B8AFA6',
           },
-          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+          fontFamily: {
+            sans:  ['Inter', 'system-ui', 'sans-serif'],
+            serif: ['Georgia', 'serif'],
+          },
+          boxShadow: {
+            'premium': '0 4px 24px rgba(61,12,12,0.10), 0 1px 4px rgba(61,12,12,0.06)',
+            'premium-lg': '0 8px 40px rgba(61,12,12,0.14), 0 2px 8px rgba(61,12,12,0.08)',
+            'inner-premium': 'inset 0 1px 0 rgba(255,255,255,0.6)',
+          }
         }
       }
     }
@@ -30,33 +45,112 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
-    body { font-family: 'Inter', sans-serif; background: #F5F1ED; color: #4A1F1F; margin: 0; }
-    .chat-scroll { scrollbar-width: thin; scrollbar-color: #C8C3BC transparent; }
-    .chat-scroll::-webkit-scrollbar { width: 4px; }
-    .chat-scroll::-webkit-scrollbar-thumb { background: #C8C3BC; border-radius: 2px; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #FAF7F4;
+      color: #3D0C0C;
+      margin: 0;
+    }
+
+    /* ── Scrollbars finos premium ── */
+    .chat-scroll { scrollbar-width: thin; scrollbar-color: #D4CCC4 transparent; }
+    .chat-scroll::-webkit-scrollbar { width: 3px; }
+    .chat-scroll::-webkit-scrollbar-thumb { background: #C9A96E40; border-radius: 2px; }
+    .chat-scroll::-webkit-scrollbar-thumb:hover { background: #C9A96E80; }
+
+    /* ── Typing dots ── */
     .typing-dot { animation: typing 1.4s infinite; }
     .typing-dot:nth-child(2) { animation-delay: 0.2s; }
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
     @keyframes typing {
-      0%,60%,100% { transform: translateY(0); opacity: 0.4; }
-      30% { transform: translateY(-6px); opacity: 1; }
+      0%,60%,100% { transform: translateY(0); opacity: 0.3; }
+      30% { transform: translateY(-5px); opacity: 1; }
     }
-    .event-card:hover { transform: translateX(2px); }
-    .event-card { transition: all 0.15s ease; }
-    .fade-in { animation: fadeIn 0.3s ease; }
+
+    /* ── Hover card lift ── */
+    .event-card { transition: all 0.18s cubic-bezier(.4,0,.2,1); }
+    .event-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(61,12,12,0.10); }
+
+    /* ── Fade in ── */
+    .fade-in { animation: fadeIn 0.25s ease; }
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
+      from { opacity: 0; transform: translateY(6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .modal-overlay { backdrop-filter: blur(4px); }
-    /* Crimson/Garnet gradient — replaces old sage gradient */
+
+    /* ── Slide in modal ── */
+    .slide-up { animation: slideUp 0.3s cubic-bezier(.4,0,.2,1); }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── Blur overlay ── */
+    .modal-overlay { backdrop-filter: blur(6px); }
+
+    /* ── Gradientes premium granate ── */
     .gradient-accent {
-      background: linear-gradient(135deg, #8B1A1A 0%, #6B0F0F 100%);
+      background: linear-gradient(135deg, #8B1A1A 0%, #5C0F0F 100%);
+      box-shadow: 0 2px 12px rgba(139,26,26,0.35);
     }
+    .gradient-accent:hover { box-shadow: 0 4px 20px rgba(139,26,26,0.45); }
+
     .gradient-wine {
-      background: linear-gradient(135deg, #4A1F1F 0%, #7A4040 100%);
+      background: linear-gradient(135deg, #3D0C0C 0%, #6B1E1E 100%);
     }
-    input:focus, textarea:focus { outline: none; }
+
+    .gradient-sidebar {
+      background: linear-gradient(180deg, #1E0A0A 0%, #2D1010 60%, #1A0808 100%);
+    }
+
+    .gradient-gold {
+      background: linear-gradient(135deg, #C9A96E 0%, #E8CFA0 50%, #C9A96E 100%);
+    }
+
+    /* ── Sidebar nav item activo ── */
+    .nav-active {
+      background: rgba(201,169,110,0.15);
+      border-left: 2px solid #C9A96E;
+      color: #C9A96E !important;
+    }
+
+    /* ── Input focus ring granate ── */
+    input:focus, textarea:focus, select:focus { outline: none; }
+
+    /* ── Glassmorphism sutil para cards ── */
+    .glass-card {
+      background: rgba(250,247,244,0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(212,204,196,0.6);
+    }
+
+    /* ── Gold shimmer para badge PRO ── */
+    .pro-badge {
+      background: linear-gradient(90deg, #C9A96E, #E8CFA0, #C9A96E);
+      background-size: 200% 100%;
+      animation: shimmer 2.5s infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* ── Pulse online ── */
+    .pulse-online { animation: pulseOnline 2s infinite; }
+    @keyframes pulseOnline {
+      0%,100% { box-shadow: 0 0 0 0 rgba(201,169,110,0.5); }
+      50%     { box-shadow: 0 0 0 4px rgba(201,169,110,0); }
+    }
+
+    /* ── Separador dorado ── */
+    .gold-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #C9A96E40, transparent);
+    }
   </style>
 </head>
 <body class="h-screen overflow-hidden">
