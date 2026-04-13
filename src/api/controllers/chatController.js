@@ -49,7 +49,7 @@ function buildMissingDataQuestion(missingFields) {
     .map(f => FIELD_QUESTIONS[f] || `¿Puedes darme más información sobre "${f}"?`)
     .filter(Boolean);
   if (questions.length === 1) return questions[0];
-  return 'Necesito algunos datos más:\n' + questions.map((q, i) => `${i + 1}. ${q}`).join('\n');
+  return 'Necesito algunos datos más:\n' + questions.map((q, i) => (i + 1) + '. ' + q).join('\n');
 }
 
 // ─── Execute a function call ─────────────────────────────────────────
@@ -173,10 +173,8 @@ async function generateConversationalResponse(userMessage, context, functionResu
     if (functionResult?.data) {
       messages.splice(-1, 0, {
         role:    'assistant',
-        content: `[Acción completada: ${JSON.stringify(functionResult.data)}`
-          + (functionResult.requiresSchedule
-            ? ' Plan creado. Pregunta al usuario cuándo quiere entrenar.'
-            : ']'),
+        content: '[Acción completada: ' + JSON.stringify(functionResult.data) + (functionResult.requiresSchedule
+            ? ' Plan creado. Pregunta al usuario cuándo quiere entrenar.' : ']'),
       });
     }
 
