@@ -17,7 +17,9 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
-pool.on('error', function(err) { console.error('[DB] Pool error:', err.message); });
+pool.on('error', function(err) {
+  console.error('[DB] Pool error:', err.message);
+});
 
 async function query(text, params) {
   const client = await pool.connect();
@@ -53,6 +55,8 @@ async function runMigrations(client) {
       "subscription_status VARCHAR(50) DEFAULT 'free'," +
       "stripe_customer_id VARCHAR(255)," +
       "stripe_subscription_id VARCHAR(255)," +
+      "subscription_period_end TIMESTAMP," +
+      "subscription_cancelled_at TIMESTAMP," +
       "timezone VARCHAR(100) DEFAULT 'Europe/Madrid'," +
       "preferences JSONB DEFAULT '{}'," +
       "created_at TIMESTAMP DEFAULT NOW()," +
@@ -195,6 +199,9 @@ async function runMigrations(client) {
       "ALTER TABLE user_memory ADD COLUMN IF NOT EXISTS confidence FLOAT DEFAULT 0.3",
       "ALTER TABLE user_memory ADD COLUMN IF NOT EXISTS occurrence_count INTEGER DEFAULT 1",
       "ALTER TABLE user_memory ADD COLUMN IF NOT EXISTS embedding JSONB DEFAULT '[]'",
+      // Stripe / subscription columns
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_period_end TIMESTAMP",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_cancelled_at TIMESTAMP",
     ];
     for (var i = 0; i < alterColumns.length; i++) {
       await client.query(alterColumns[i]).catch(function() {});
@@ -216,6 +223,8 @@ async function runMigrations(client) {
       "CREATE INDEX IF NOT EXISTS idx_user_preferences_key ON user_preferences (user_id, pref_key)",
       "CREATE INDEX IF NOT EXISTS idx_memory_embeddings_user ON memory_embeddings (user_id, source_type)",
       "CREATE INDEX IF NOT EXISTS idx_memory_embeddings_hash ON memory_embeddings (user_id, content_hash)",
+      "CREATE INDEX IF NOT EXISTS idx_users_stripe_customer ON users (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL",
+      "CREATE INDEX IF NOT EXISTS idx_users_subscription_status ON users (subscription_status)",
     ];
     for (var j = 0; j < indexes.length; j++) {
       await client.query(indexes[j]).catch(function(err) {
