@@ -5,126 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Secretario IA — Tu Agenda Inteligente</title>
 
-  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            cream:        '#FAF7F4',
-            'cream-dark': '#F2EDE8',
-            panel:        '#EDE8E2',
-            'panel-dark': '#E2DBD3',
-            sidebar:      '#1E0A0A',
-            'sidebar-mid':'#2D1010',
-            wine:         '#3D0C0C',
-            'wine-mid':   '#6B1E1E',
-            'wine-light': '#9B4040',
-            accent:       '#8B1A1A',
-            'accent-dark':'#5C0F0F',
-            gold:         '#C9A96E',
-            'gold-light': '#E8CFA0',
-            border:       '#D4CCC4',
-          },
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
+            cream: '#FAF7F4',
+            sidebar: '#1E0A0A',
+            wine: '#3D0C0C',
+            accent: '#8B1A1A',
+            gold: '#C9A96E',
           },
           boxShadow: {
             premium: '0 4px 24px rgba(61,12,12,0.10)',
-            'premium-lg': '0 8px 40px rgba(61,12,12,0.14)',
           }
         }
       }
     }
   </script>
 
-  <!-- Fuente -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    * { box-sizing: border-box; }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #FAF7F4 0%, #F2EDE8 100%);
-      color: #3D0C0C;
-      margin: 0;
+  <style type="text/tailwindcss">
+    @layer components {
+      .gradient-accent { @apply bg-gradient-to-br from-[#8B1A1A] to-[#5C0F0F]; }
+      .gradient-wine { @apply bg-gradient-to-br from-[#1E0A0A] to-[#2D1010]; }
+      .gold-divider { @apply h-[1px] bg-gradient-to-r from-transparent via-[#C9A96E]/30 to-transparent; }
     }
-
-    /* Scroll bonito */
-    .chat-scroll::-webkit-scrollbar { width: 4px; }
-    .chat-scroll::-webkit-scrollbar-thumb {
-      background: #C9A96E60;
-      border-radius: 4px;
-    }
-
-    /* Animaciones suaves */
-    .fade-in {
-      animation: fadeIn 0.25s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Hover elegante */
-    .card-hover {
-      transition: all 0.2s ease;
-    }
-
-    .card-hover:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(61,12,12,0.15);
-    }
-
-    /* Botón premium */
-    .btn-primary {
-      background: linear-gradient(135deg, #8B1A1A, #5C0F0F);
-      color: white;
-      transition: all 0.2s ease;
-    }
-
-    .btn-primary:hover {
-      transform: scale(1.02);
-      box-shadow: 0 6px 20px rgba(139,26,26,0.4);
-    }
-
-    /* Sidebar */
-    .sidebar {
-      background: linear-gradient(180deg, #1E0A0A, #2D1010);
-    }
-
-    /* Input limpio */
-    input, textarea {
-      outline: none;
-    }
-
-    /* Badge PRO */
-    .pro {
-      background: linear-gradient(90deg, #C9A96E, #E8CFA0);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      font-weight: 600;
-    }
+    body { background-color: #FAF7F4; font-family: 'Inter', sans-serif; }
   </style>
-</head>
 
-<body class="h-screen overflow-hidden">
-
-  <!-- APP ROOT -->
-  <div id="app" class="h-full flex"></div>
-
-  <!-- React -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="app"></div>
 
-  <!-- Tu lógica -->
-  <script src="/app.js" type="text/babel"></script>
-
+  <script src="app.js" type="text/babel"></script>
 </body>
 </html>
