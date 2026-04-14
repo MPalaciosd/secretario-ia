@@ -211,62 +211,63 @@ function UpgradeModal({ onClose, onShowAuth }) {
 function Sidebar({ view, setView, onShowAuth, onShowUpgrade }) {
   const { user, logout, isPro, subscription } = useAuth();
   const [portalLoading, setPortalLoading] = useState(false);
-  const navItems = [{ id: 'calendar', label: 'Agenda', icon: 'calendar' }, { id: 'chat', label: 'Chat IA', icon: 'chat' }];
+  const navItems = [
+    { id: 'calendar', label: 'Agenda', icon: 'calendar' },
+    { id: 'chat',     label: 'IA',     icon: 'chat' },
+    { id: 'pricing',  label: 'Planes', icon: 'star' },
+  ];
   const openPortal = async function() {
     setPortalLoading(true);
     try { const data = await api.get('/api/stripe/portal'); if (data.url) window.open(data.url, '_blank'); }
     catch(err) { alert('Error al abrir el portal de facturación.'); }
     finally { setPortalLoading(false); }
   };
-  const periodEnd = subscription && subscription.periodEnd ? new Date(subscription.periodEnd).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
-  return React.createElement('aside', { className: 'w-60 gradient-sidebar h-full flex flex-col flex-shrink-0', style: { boxShadow: '4px 0 24px rgba(0,0,0,0.25)' } },
-    React.createElement('div', { className: 'p-5 pb-4' },
-      React.createElement('div', { className: 'flex items-center gap-3' },
-        React.createElement('div', { className: 'w-10 h-10 rounded-xl gradient-accent flex items-center justify-center flex-shrink-0' }, React.createElement(LogoIcon, { size: 24, className: 'text-white' })),
-        React.createElement('div', null,
-          React.createElement('h1', { className: 'font-bold text-cream text-sm leading-tight tracking-tight' }, 'Secretario IA'),
-          React.createElement('p', { className: 'text-gold/60 text-[10px] font-light tracking-widest uppercase' }, 'v3.3')
-        )
-      ),
-      React.createElement('div', { className: 'gold-divider mt-4' })
+  return React.createElement('aside', {
+    className: 'w-16 gradient-sidebar h-full flex flex-col flex-shrink-0 items-center py-4',
+    style: { boxShadow: '4px 0 24px rgba(0,0,0,0.25)' }
+  },
+    /* Logo */
+    React.createElement('div', { className: 'mb-5 flex flex-col items-center' },
+      React.createElement('div', { className: 'w-9 h-9 rounded-xl gradient-accent flex items-center justify-center shadow-premium' },
+        React.createElement(LogoIcon, { size: 20, className: 'text-white' })
+      )
     ),
-    React.createElement('nav', { className: 'flex-1 px-3 space-y-0.5' },
+    React.createElement('div', { className: 'gold-divider w-8 mb-3' }),
+
+    /* Nav items */
+    React.createElement('nav', { className: 'flex-1 flex flex-col items-center gap-1 w-full px-2' },
       navItems.map(function(item) {
         const isActive = view === item.id;
         return React.createElement('button', {
           key: item.id,
           onClick: function() { setView(item.id); },
-          className: 'w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ' + (isActive ? 'nav-active' : 'text-cream/50 hover:text-cream hover:bg-white/5')
+          title: item.label,
+          className: 'w-full flex flex-col items-center gap-0.5 px-1 py-2.5 rounded-xl text-[10px] font-semibold transition-all tracking-wide ' +
+            (isActive ? 'nav-active' : 'text-cream/40 hover:text-cream hover:bg-white/5')
         },
-          React.createElement(Icon, { name: item.icon, size: 16 }), item.label);
-      }),
-      React.createElement('div', { className: 'gold-divider my-3 mx-1' }),
-      React.createElement('button', {
-        onClick: function() { setView('pricing'); },
-        className: 'w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ' + (view === 'pricing' ? 'nav-active' : 'text-cream/50 hover:text-cream hover:bg-white/5')
-      }, React.createElement(Icon, { name: 'star', size: 16 }), 'Planes')
+          React.createElement(Icon, { name: item.icon, size: 18 }),
+          React.createElement('span', null, item.label)
+        );
+      })
     ),
-    React.createElement('div', { className: 'p-3 space-y-2' },
-      React.createElement('div', { className: 'gold-divider mb-3' }),
-      user && isPro() ? React.createElement('div', { className: 'space-y-2' },
-        React.createElement('div', { className: 'flex items-center gap-2 px-3 py-2 bg-gold/10 rounded-xl border border-gold/20' },
-          React.createElement(Icon, { name: 'lightning', size: 12, className: 'text-gold' }),
-          React.createElement('span', { className: 'text-xs font-semibold pro-badge' }, 'Plan PRO activo')
-        ),
-        periodEnd && subscription && subscription.cancelAtPeriodEnd && React.createElement('p', { className: 'text-[10px] text-cream/30 px-3 text-center' }, 'Vence el ' + periodEnd),
-        React.createElement('button', { onClick: openPortal, disabled: portalLoading, className: 'w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-cream/40 hover:bg-white/5 hover:text-cream/70 transition-all border border-white/10' },
-          React.createElement(Icon, { name: 'creditCard', size: 12 }), portalLoading ? 'Cargando...' : 'Gestionar suscripción')
-      ) : user && React.createElement('button', { onClick: onShowUpgrade, className: 'w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold text-gold bg-gold/10 hover:bg-gold/20 transition-all border border-gold/20' },
-        React.createElement(Icon, { name: 'lightning', size: 12, className: 'text-gold' }), 'Actualizar a PRO'
+
+    /* Bottom: user / login */
+    React.createElement('div', { className: 'flex flex-col items-center gap-2 w-full px-2' },
+      React.createElement('div', { className: 'gold-divider w-8 mb-1' }),
+      user && isPro() && React.createElement('div', { title: 'Plan PRO activo', className: 'w-9 h-9 rounded-xl bg-gold/15 border border-gold/30 flex items-center justify-center' },
+        React.createElement(Icon, { name: 'lightning', size: 15, className: 'text-gold' })
       ),
-      user ? React.createElement('div', { className: 'space-y-1' },
-        React.createElement('div', { className: 'px-3 py-2.5 bg-white/5 rounded-xl border border-white/10' },
-          React.createElement('p', { className: 'text-xs font-semibold text-cream/80 truncate' }, user.name),
-          React.createElement('p', { className: 'text-[10px] text-cream/30 truncate mt-0.5' }, user.email)
-        ),
-        React.createElement('button', { onClick: logout, className: 'w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-cream/30 hover:bg-white/5 hover:text-cream/60 transition-all' },
-          React.createElement(Icon, { name: 'logout', size: 13 }), 'Cerrar sesión')
-      ) : React.createElement('button', { onClick: onShowAuth, className: 'w-full gradient-accent text-white py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all' }, 'Iniciar sesión')
+      user && !isPro() && React.createElement('button', { onClick: onShowUpgrade, title: 'Actualizar a PRO',
+        className: 'w-9 h-9 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center hover:bg-gold/20 transition-all' },
+        React.createElement(Icon, { name: 'lightning', size: 15, className: 'text-gold' })
+      ),
+      user ? React.createElement('button', { onClick: logout, title: 'Cerrar sesión',
+        className: 'w-9 h-9 rounded-xl flex items-center justify-center text-cream/30 hover:bg-white/5 hover:text-cream/60 transition-all' },
+        React.createElement(Icon, { name: 'logout', size: 15 })
+      ) : React.createElement('button', { onClick: onShowAuth, title: 'Iniciar sesión',
+        className: 'w-9 h-9 rounded-xl gradient-accent flex items-center justify-center text-white hover:opacity-90 transition-all shadow-premium' },
+        React.createElement(Icon, { name: 'user', size: 15 })
+      )
     )
   );
 }
@@ -387,7 +388,7 @@ function ChatPanel({ onShowUpgrade }) {
       React.createElement('p', { className: 'text-wine-light text-sm mt-1 font-light max-w-xs' }, 'Inicia sesión para hablar con tu asistente personal')
     )
   );
-  return React.createElement('div', { className: 'flex-1 flex flex-col bg-cream overflow-hidden' },
+  return React.createElement('div', { className: 'flex-1 flex flex-col bg-cream overflow-hidden h-full' },
     React.createElement('div', { className: 'px-6 py-4 border-b border-border/60 flex items-center justify-between bg-cream', style: { boxShadow: '0 1px 8px rgba(61,12,12,0.06)' } },
       React.createElement('div', { className: 'flex items-center gap-3' },
         React.createElement('div', { className: 'w-9 h-9 rounded-xl gradient-accent flex items-center justify-center shadow-premium' }, React.createElement(LogoIcon, { size: 20, className: 'text-white' })),
@@ -530,7 +531,7 @@ function CalendarView() {
       React.createElement('p', { className: 'text-wine-light text-sm font-light' }, 'Inicia sesión para ver tus eventos')
     ));
   return React.createElement('div', { className: 'flex-1 flex overflow-hidden bg-cream-dark' },
-    React.createElement('div', { className: 'flex-1 flex flex-col p-6 overflow-auto' },
+    React.createElement('div', { className: 'flex-1 flex flex-col p-5 overflow-auto min-w-0' },
       React.createElement('div', { className: 'flex items-center justify-between mb-6' },
         React.createElement('div', { className: 'flex items-center gap-3' },
           React.createElement('button', { onClick: prevMonth, className: 'w-9 h-9 rounded-xl bg-cream hover:bg-panel border border-border flex items-center justify-center text-wine transition-all shadow-premium text-lg font-light' }, String.fromCharCode(8249)),
@@ -571,7 +572,7 @@ function CalendarView() {
         })
       )
     ),
-    React.createElement('div', { className: 'w-72 bg-cream border-l border-border/60 flex flex-col overflow-hidden', style: { boxShadow: '-4px 0 16px rgba(61,12,12,0.05)' } },
+    React.createElement('div', { className: 'w-64 bg-cream border-l border-border/60 flex flex-col overflow-hidden flex-shrink-0', style: { boxShadow: '-4px 0 16px rgba(61,12,12,0.05)' } },
       React.createElement('div', { className: 'p-5 border-b border-border/60 bg-cream-dark' },
         React.createElement('h3', { className: 'font-bold text-wine tracking-tight' }, selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })),
         React.createElement('p', { className: 'text-wine-light text-xs mt-0.5 font-light' }, selectedDayEvents.length === 0 ? 'Sin eventos' : selectedDayEvents.length + ' evento' + (selectedDayEvents.length > 1 ? 's' : ''))
