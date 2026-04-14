@@ -222,28 +222,39 @@ function Sidebar({ view, setView, onShowAuth, onShowUpgrade }) {
     catch(err) { alert('Error al abrir el portal de facturación.'); }
     finally { setPortalLoading(false); }
   };
-  return React.createElement('aside', {
-    className: 'w-16 gradient-sidebar h-full flex flex-col flex-shrink-0 items-center py-4',
-    style: { boxShadow: '4px 0 24px rgba(0,0,0,0.25)' }
-  },
+  const sidebarStyle = {
+    width: '64px', minWidth: '64px', height: '100%',
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    padding: '16px 0', flexShrink: 0,
+    background: 'linear-gradient(180deg, #1E0A0A, #2D1010)',
+    boxShadow: '4px 0 24px rgba(0,0,0,0.25)'
+  };
+  const navStyle = { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '100%', padding: '0 8px' };
+  const bottomStyle = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', width: '100%', padding: '0 8px' };
+  const btnBase = { width: '44px', height: '44px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', cursor: 'pointer', border: 'none', transition: 'all 0.2s', fontSize: '9px', fontWeight: '700', letterSpacing: '0.05em', background: 'transparent', padding: 0 };
+  const iconBtnBase = { width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none', transition: 'all 0.2s', background: 'transparent' };
+
+  return React.createElement('aside', { style: sidebarStyle },
     /* Logo */
-    React.createElement('div', { className: 'mb-5 flex flex-col items-center' },
-      React.createElement('div', { className: 'w-9 h-9 rounded-xl gradient-accent flex items-center justify-center shadow-premium' },
+    React.createElement('div', { style: { marginBottom: '16px' } },
+      React.createElement('div', { className: 'gradient-accent', style: { width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
         React.createElement(LogoIcon, { size: 20, className: 'text-white' })
       )
     ),
-    React.createElement('div', { className: 'gold-divider w-8 mb-3' }),
+    React.createElement('div', { className: 'gold-divider', style: { width: '32px', marginBottom: '12px' } }),
 
     /* Nav items */
-    React.createElement('nav', { className: 'flex-1 flex flex-col items-center gap-1 w-full px-2' },
+    React.createElement('nav', { style: navStyle },
       navItems.map(function(item) {
         const isActive = view === item.id;
         return React.createElement('button', {
           key: item.id,
           onClick: function() { setView(item.id); },
           title: item.label,
-          className: 'w-full flex flex-col items-center gap-0.5 px-1 py-2.5 rounded-xl text-[10px] font-semibold transition-all tracking-wide ' +
-            (isActive ? 'nav-active' : 'text-cream/40 hover:text-cream hover:bg-white/5')
+          style: Object.assign({}, btnBase, isActive
+            ? { color: '#C9A96E', background: 'rgba(201,169,110,0.15)' }
+            : { color: 'rgba(250,247,244,0.4)' }
+          )
         },
           React.createElement(Icon, { name: item.icon, size: 18 }),
           React.createElement('span', null, item.label)
@@ -252,20 +263,22 @@ function Sidebar({ view, setView, onShowAuth, onShowUpgrade }) {
     ),
 
     /* Bottom: user / login */
-    React.createElement('div', { className: 'flex flex-col items-center gap-2 w-full px-2' },
-      React.createElement('div', { className: 'gold-divider w-8 mb-1' }),
-      user && isPro() && React.createElement('div', { title: 'Plan PRO activo', className: 'w-9 h-9 rounded-xl bg-gold/15 border border-gold/30 flex items-center justify-center' },
+    React.createElement('div', { style: bottomStyle },
+      React.createElement('div', { className: 'gold-divider', style: { width: '32px', marginBottom: '4px' } }),
+      user && isPro() && React.createElement('div', { title: 'Plan PRO activo',
+        style: Object.assign({}, iconBtnBase, { background: 'rgba(201,169,110,0.15)', border: '1px solid rgba(201,169,110,0.3)' }) },
         React.createElement(Icon, { name: 'lightning', size: 15, className: 'text-gold' })
       ),
       user && !isPro() && React.createElement('button', { onClick: onShowUpgrade, title: 'Actualizar a PRO',
-        className: 'w-9 h-9 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center hover:bg-gold/20 transition-all' },
+        style: Object.assign({}, iconBtnBase, { background: 'rgba(201,169,110,0.1)', border: '1px solid rgba(201,169,110,0.2)' }) },
         React.createElement(Icon, { name: 'lightning', size: 15, className: 'text-gold' })
       ),
       user ? React.createElement('button', { onClick: logout, title: 'Cerrar sesión',
-        className: 'w-9 h-9 rounded-xl flex items-center justify-center text-cream/30 hover:bg-white/5 hover:text-cream/60 transition-all' },
+        style: Object.assign({}, iconBtnBase, { color: 'rgba(250,247,244,0.3)' }) },
         React.createElement(Icon, { name: 'logout', size: 15 })
       ) : React.createElement('button', { onClick: onShowAuth, title: 'Iniciar sesión',
-        className: 'w-9 h-9 rounded-xl gradient-accent flex items-center justify-center text-white hover:opacity-90 transition-all shadow-premium' },
+        className: 'gradient-accent',
+        style: Object.assign({}, iconBtnBase, { color: 'white' }) },
         React.createElement(Icon, { name: 'user', size: 15 })
       )
     )
@@ -388,7 +401,7 @@ function ChatPanel({ onShowUpgrade }) {
       React.createElement('p', { className: 'text-wine-light text-sm mt-1 font-light max-w-xs' }, 'Inicia sesión para hablar con tu asistente personal')
     )
   );
-  return React.createElement('div', { className: 'flex-1 flex flex-col bg-cream overflow-hidden h-full' },
+  return React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', background: '#FAF7F4', overflow: 'hidden', height: '100%' } },
     React.createElement('div', { className: 'px-6 py-4 border-b border-border/60 flex items-center justify-between bg-cream', style: { boxShadow: '0 1px 8px rgba(61,12,12,0.06)' } },
       React.createElement('div', { className: 'flex items-center gap-3' },
         React.createElement('div', { className: 'w-9 h-9 rounded-xl gradient-accent flex items-center justify-center shadow-premium' }, React.createElement(LogoIcon, { size: 20, className: 'text-white' })),
@@ -530,8 +543,8 @@ function CalendarView() {
       React.createElement('h2', { className: 'text-xl font-bold text-wine tracking-tight' }, 'Tu Agenda Inteligente'),
       React.createElement('p', { className: 'text-wine-light text-sm font-light' }, 'Inicia sesión para ver tus eventos')
     ));
-  return React.createElement('div', { className: 'flex-1 flex overflow-hidden bg-cream-dark' },
-    React.createElement('div', { className: 'flex-1 flex flex-col p-5 overflow-auto min-w-0' },
+  return React.createElement('div', { style: { flex: 1, display: 'flex', overflow: 'hidden', background: '#F2EDE8' } },
+    React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', padding: '20px', overflow: 'auto', minWidth: 0 } },
       React.createElement('div', { className: 'flex items-center justify-between mb-6' },
         React.createElement('div', { className: 'flex items-center gap-3' },
           React.createElement('button', { onClick: prevMonth, className: 'w-9 h-9 rounded-xl bg-cream hover:bg-panel border border-border flex items-center justify-center text-wine transition-all shadow-premium text-lg font-light' }, String.fromCharCode(8249)),
@@ -572,7 +585,7 @@ function CalendarView() {
         })
       )
     ),
-    React.createElement('div', { className: 'w-64 bg-cream border-l border-border/60 flex flex-col overflow-hidden flex-shrink-0', style: { boxShadow: '-4px 0 16px rgba(61,12,12,0.05)' } },
+    React.createElement('div', { style: { width: '256px', minWidth: '256px', background: '#FAF7F4', borderLeft: '1px solid rgba(212,204,196,0.6)', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '-4px 0 16px rgba(61,12,12,0.05)' } },
       React.createElement('div', { className: 'p-5 border-b border-border/60 bg-cream-dark' },
         React.createElement('h3', { className: 'font-bold text-wine tracking-tight' }, selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })),
         React.createElement('p', { className: 'text-wine-light text-xs mt-0.5 font-light' }, selectedDayEvents.length === 0 ? 'Sin eventos' : selectedDayEvents.length + ' evento' + (selectedDayEvents.length > 1 ? 's' : ''))
@@ -757,10 +770,10 @@ function App() {
     if (view === 'pricing') return React.createElement(PricingPage, { onShowAuth: function() { setShowAuth(true); }, onShowUpgrade: function() { setShowUpgrade(true); } });
     return React.createElement(CalendarView);
   };
-  return React.createElement('div', { className: 'h-screen flex overflow-hidden' },
+  return React.createElement('div', { style: { height: '100vh', display: 'flex', overflow: 'hidden' } },
     React.createElement(Sidebar, { view, setView, onShowAuth: function() { setShowAuth(true); }, onShowUpgrade: function() { setShowUpgrade(true); } }),
-    React.createElement('main', { className: 'flex-1 flex flex-col overflow-hidden' },
-      React.createElement('div', { className: 'flex-1 flex overflow-hidden' }, renderView())
+    React.createElement('main', { style: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 } },
+      React.createElement('div', { style: { flex: 1, display: 'flex', overflow: 'hidden' } }, renderView())
     ),
     showAuth && !user && React.createElement(AuthModal, { onClose: function() { setShowAuth(false); } }),
     showUpgrade && !user ? React.createElement(UpgradeModal, { onClose: function() { setShowUpgrade(false); }, onShowAuth: function() { setShowUpgrade(false); setShowAuth(true); } }) : null,
