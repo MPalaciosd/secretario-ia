@@ -563,159 +563,197 @@ function CalendarView() {
     React.createElement('p', { style: { margin: 0, color: C.wineLight, fontSize: 13 } }, 'Inicia sesión para ver tus eventos')
   );
 
-  return React.createElement('div', { style: { flex: 1, display: 'flex', overflow: 'hidden', background: C.creamDark } },
+  // Estilos reutilizables
+  var btnNav = { width: 32, height: 32, borderRadius: 8, border: '1px solid ' + C.border, background: C.cream, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
 
-    // ── CALENDARIO CENTRAL ──
-    React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 20px 20px 20px', overflow: 'hidden', minWidth: 0 } },
+  // ── WRAPPER PRINCIPAL: sidebar ya está a la izquierda, aquí sólo el área de la vista ──
+  // Estructura: [COLUMNA CALENDARIO] | [COLUMNA DÍA]
+  var wrapperStyle = { display: 'flex', flexDirection: 'row', width: '100%', height: '100%', overflow: 'hidden', background: C.creamDark };
 
-      // Cabecera mes
-      React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexShrink: 0 } },
-        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
-          React.createElement('button', { onClick: function() { setSelectedDate(new Date(cy, cm - 1, 1)); },
-            style: { width: 32, height: 32, borderRadius: 8, border: '1px solid ' + C.border, background: C.cream, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
-          }, React.createElement(Icon, { name: 'chevLeft', size: 16, color: C.wine })),
-          React.createElement('h2', { style: { margin: 0, color: C.wine, fontSize: 20, fontWeight: 700 } }, months[cm] + ' ' + cy),
-          React.createElement('button', { onClick: function() { setSelectedDate(new Date(cy, cm + 1, 1)); },
-            style: { width: 32, height: 32, borderRadius: 8, border: '1px solid ' + C.border, background: C.cream, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
-          }, React.createElement(Icon, { name: 'chevRight', size: 16, color: C.wine }))
-        ),
-        React.createElement('div', { style: { display: 'flex', gap: 8 } },
-          React.createElement('button', { onClick: function() { setSelectedDate(new Date()); },
-            style: { padding: '6px 14px', borderRadius: 8, border: '1px solid ' + C.border, background: C.cream, color: C.wine, fontSize: 13, fontWeight: 500, cursor: 'pointer' }
-          }, 'Hoy'),
-          React.createElement('button', { onClick: function() { setShowForm(true); },
-            style: { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,' + C.accent + ',' + C.accentDark + ')', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }
-          }, React.createElement(Icon, { name: 'plus', size: 14, color: 'white' }), 'Nuevo evento')
-        )
+  // ── COLUMNA IZQUIERDA: cabecera + grid ──
+  var calColStyle = { display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, height: '100%', overflow: 'hidden', padding: '20px' };
+
+  // Cabecera mes
+  var calHeader = React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexShrink: 0 } },
+    React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+      React.createElement('button', { onClick: function() { setSelectedDate(new Date(cy, cm - 1, 1)); }, style: btnNav },
+        React.createElement(Icon, { name: 'chevLeft', size: 16, color: C.wine })
       ),
+      React.createElement('h2', { style: { margin: 0, color: C.wine, fontSize: 20, fontWeight: 700, minWidth: 180 } }, months[cm] + ' ' + cy),
+      React.createElement('button', { onClick: function() { setSelectedDate(new Date(cy, cm + 1, 1)); }, style: btnNav },
+        React.createElement(Icon, { name: 'chevRight', size: 16, color: C.wine })
+      )
+    ),
+    React.createElement('div', { style: { display: 'flex', gap: 8 } },
+      React.createElement('button', { onClick: function() { setSelectedDate(new Date()); },
+        style: { padding: '7px 14px', borderRadius: 8, border: '1px solid ' + C.border, background: C.cream, color: C.wine, fontSize: 13, fontWeight: 500, cursor: 'pointer' }
+      }, 'Hoy'),
+      React.createElement('button', { onClick: function() { setShowForm(true); },
+        style: { display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,' + C.accent + ',' + C.accentDark + ')', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }
+      }, React.createElement(Icon, { name: 'plus', size: 14, color: 'white' }), 'Nuevo evento')
+    )
+  );
 
-      // Grid del calendario
-      React.createElement('div', { style: { flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' } },
-        // Cabecera días
-        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4, flexShrink: 0 } },
-          dayNames.map(function(d) {
-            return React.createElement('div', { key: d, style: { textAlign: 'center', fontSize: 11, fontWeight: 700, color: C.wineMid, padding: '4px 0', letterSpacing: '0.08em', opacity: 0.55 } }, d);
-          })
-        ),
-        // Celdas
-        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridTemplateRows: 'repeat(' + (totalCells / 7) + ', 1fr)', gap: 2, flex: 1, overflow: 'hidden' } },
-          Array.from({ length: totalCells }, function(_, i) {
-            var day = i - firstDay + 1;
-            var isValid = day >= 1 && day <= daysInMonth;
-            var isToday = isValid && day === today.getDate() && cm === today.getMonth() && cy === today.getFullYear();
-            var isSelected = isValid && day === selectedDate.getDate() && cm === selectedDate.getMonth() && cy === selectedDate.getFullYear();
-            var dayOfWeek = i % 7; // 0=Lu, 5=Sá, 6=Do
-            var isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
-            var dayEvents = isValid ? getEventsForDay(day) : [];
+  // Cabecera días semana
+  var calDayNames = React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 4, flexShrink: 0 } },
+    dayNames.map(function(d, di) {
+      var isWknd = di === 5 || di === 6;
+      return React.createElement('div', { key: d, style: { textAlign: 'center', fontSize: 11, fontWeight: 700, color: isWknd ? C.wineMid : C.wineMid, padding: '3px 0', letterSpacing: '0.07em', opacity: isWknd ? 0.4 : 0.45 } }, d);
+    })
+  );
 
-            var bg = isSelected ? 'linear-gradient(135deg,' + C.accent + ',' + C.accentDark + ')' :
-                     isToday ? C.cream :
-                     isWeekend ? C.weekend : C.cream;
-            var borderColor = isSelected ? C.accent : isToday ? C.gold : isWeekend ? C.borderLight : 'transparent';
+  // Grid celdas
+  var calGrid = React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '1fr', gap: 3, flex: 1, overflow: 'hidden' } },
+    Array.from({ length: totalCells }, function(_, i) {
+      var day = i - firstDay + 1;
+      var isValid  = day >= 1 && day <= daysInMonth;
+      var isToday  = isValid && day === today.getDate() && cm === today.getMonth() && cy === today.getFullYear();
+      var isSelected = isValid && day === selectedDate.getDate() && cm === selectedDate.getMonth() && cy === selectedDate.getFullYear();
+      var dayOfWeek  = i % 7;
+      var isWeekend  = dayOfWeek === 5 || dayOfWeek === 6;
+      var dayEvents  = isValid ? getEventsForDay(day) : [];
 
-            return React.createElement('div', {
-              key: i,
-              onClick: function() { if (isValid) setSelectedDate(new Date(cy, cm, day)); },
-              style: {
-                background: isValid ? bg : 'transparent',
-                border: '1px solid ' + (isValid ? borderColor : 'transparent'),
-                borderRadius: 8,
-                padding: '5px 6px',
-                cursor: isValid ? 'pointer' : 'default',
-                display: 'flex', flexDirection: 'column',
-                overflow: 'hidden',
-                transition: 'all 0.15s',
-                opacity: isValid ? 1 : 0,
-              }
-            },
-              isValid && React.createElement(React.Fragment, null,
-                React.createElement('div', { style: { marginBottom: 2 } },
-                  isToday && !isSelected
-                    ? React.createElement('div', { style: { width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg,' + C.accent + ',' + C.accentDark + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-                        React.createElement('span', { style: { fontSize: 11, fontWeight: 700, color: 'white' } }, day)
-                      )
-                    : React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: isSelected ? 'rgba(250,247,244,0.9)' : C.wine } }, day)
-                ),
-                React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 1, overflow: 'hidden' } },
-                  dayEvents.slice(0, 2).map(function(ev, idx) {
-                    return React.createElement('div', { key: idx, style: { fontSize: 9, padding: '1px 4px', borderRadius: 3, background: isSelected ? 'rgba(255,255,255,0.2)' : (etColors[ev.event_type] || C.accent), color: isSelected ? C.cream : 'white', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, ev.title);
-                  }),
-                  dayEvents.length > 2 && React.createElement('div', { style: { fontSize: 9, color: isSelected ? 'rgba(250,247,244,0.6)' : C.wineLight } }, '+' + (dayEvents.length - 2) + ' más')
+      var cellBg = !isValid ? 'transparent'
+        : isSelected ? 'linear-gradient(135deg,' + C.accent + ' 0%,' + C.accentDark + ' 100%)'
+        : isToday    ? '#FFFFFF'
+        : isWeekend  ? '#E8DDD4'
+        : '#F5F0EB';
+
+      var cellBorder = !isValid ? 'transparent'
+        : isSelected ? C.accentDark
+        : isToday    ? C.gold
+        : isWeekend  ? '#CFC6BC'
+        : '#E2D9D0';
+
+      return React.createElement('div', {
+        key: i,
+        onClick: function() { if (isValid) setSelectedDate(new Date(cy, cm, day)); },
+        style: {
+          background: cellBg,
+          border: '1px solid ' + cellBorder,
+          borderRadius: 8,
+          padding: '5px 6px',
+          cursor: isValid ? 'pointer' : 'default',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          transition: 'box-shadow 0.15s',
+          visibility: isValid ? 'visible' : 'hidden',
+        }
+      },
+        isValid && React.createElement(React.Fragment, null,
+          React.createElement('div', { style: { marginBottom: 2, flexShrink: 0 } },
+            isToday && !isSelected
+              ? React.createElement('div', { style: { width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg,' + C.accent + ',' + C.accentDark + ')', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+                  React.createElement('span', { style: { fontSize: 11, fontWeight: 700, color: 'white' } }, day)
                 )
+              : React.createElement('span', { style: { fontSize: 12, fontWeight: isSelected || isToday ? 700 : 500, color: isSelected ? 'rgba(250,247,244,0.95)' : C.wine } }, day)
+          ),
+          React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 2, overflow: 'hidden', flex: 1 } },
+            dayEvents.slice(0, 2).map(function(ev, idx) {
+              return React.createElement('div', { key: idx, style: {
+                fontSize: 9, padding: '1px 5px', borderRadius: 4,
+                background: isSelected ? 'rgba(255,255,255,0.22)' : (etColors[ev.event_type] || C.accent),
+                color: isSelected ? C.cream : 'white',
+                fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+              } }, ev.title);
+            }),
+            dayEvents.length > 2 && React.createElement('span', { style: { fontSize: 9, color: isSelected ? 'rgba(250,247,244,0.55)' : C.wineLight } }, '+' + (dayEvents.length - 2))
+          )
+        )
+      );
+    })
+  );
+
+  // ── COLUMNA DERECHA: panel día ──
+  var dayPanelStyle = { width: 252, minWidth: 252, flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%', background: C.cream, borderLeft: '1px solid ' + C.border, overflow: 'hidden' };
+
+  var dayPanel = React.createElement('div', { style: dayPanelStyle },
+    // Cabecera panel día
+    React.createElement('div', { style: { padding: '18px 16px 14px', borderBottom: '1px solid ' + C.border, background: C.creamDark, flexShrink: 0 } },
+      React.createElement('p', { style: { margin: '0 0 2px', color: C.wine, fontSize: 14, fontWeight: 700, textTransform: 'capitalize' } },
+        selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+      ),
+      React.createElement('p', { style: { margin: 0, color: C.wineLight, fontSize: 12 } },
+        selectedDayEvents.length === 0 ? 'Sin eventos' : selectedDayEvents.length + ' evento' + (selectedDayEvents.length !== 1 ? 's' : '')
+      )
+    ),
+    // Lista eventos
+    React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 } },
+      selectedDayEvents.length === 0
+        ? React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, opacity: 0.25, gap: 8 } },
+            React.createElement(Icon, { name: 'calendar', size: 30, color: C.wine }),
+            React.createElement('p', { style: { margin: 0, fontSize: 12, color: C.wine } }, 'Día libre')
+          )
+        : selectedDayEvents.map(function(ev) {
+            return React.createElement('div', { key: ev.id, style: { background: C.creamDark, borderRadius: 12, padding: '10px 12px', border: '1px solid ' + C.border } },
+              React.createElement('div', { style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 } },
+                React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                  React.createElement('div', { style: { display: 'inline-block', fontSize: 9, padding: '2px 7px', borderRadius: 20, fontWeight: 700, marginBottom: 5, background: etColors[ev.event_type] || C.accent, color: 'white', letterSpacing: '0.05em' } }, (ev.event_type || 'general').toUpperCase()),
+                  React.createElement('p', { style: { margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: C.wine, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, ev.title),
+                  React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 4 } },
+                    React.createElement(Icon, { name: 'clock', size: 10, color: C.wineLight }),
+                    React.createElement('span', { style: { fontSize: 11, color: C.wineLight } },
+                      new Date(ev.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                      ev.duration_minutes ? ' · ' + ev.duration_minutes + ' min' : ''
+                    )
+                  )
+                ),
+                React.createElement('button', {
+                  onClick: function() { deleteEvent(ev.id); },
+                  style: { width: 26, height: 26, borderRadius: 7, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+                  onMouseEnter: function(e) { e.currentTarget.style.background = '#FEF2F2'; },
+                  onMouseLeave: function(e) { e.currentTarget.style.background = 'transparent'; }
+                }, React.createElement(Icon, { name: 'trash', size: 12, color: '#EF4444' }))
               )
             );
           })
-        )
-      )
-    ),
+    )
+  );
 
-    // ── PANEL DÍA DERECHA ──
-    React.createElement('div', { style: { width: 248, minWidth: 248, background: C.cream, borderLeft: '1px solid ' + C.border, display: 'flex', flexDirection: 'column', overflow: 'hidden' } },
-      React.createElement('div', { style: { padding: '16px 16px 14px', borderBottom: '1px solid ' + C.border, background: C.creamDark, flexShrink: 0 } },
-        React.createElement('h3', { style: { margin: '0 0 2px', color: C.wine, fontSize: 14, fontWeight: 700, textTransform: 'capitalize' } },
-          selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
-        ),
-        React.createElement('p', { style: { margin: 0, color: C.wineLight, fontSize: 12 } },
-          selectedDayEvents.length === 0 ? 'Sin eventos' : selectedDayEvents.length + ' evento' + (selectedDayEvents.length > 1 ? 's' : '')
+  // ── MODAL NUEVO EVENTO ──
+  var eventModal = showForm && React.createElement('div', {
+    style: { position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(61,12,12,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    onClick: function(e) { if (e.target === e.currentTarget) setShowForm(false); }
+  },
+    React.createElement('div', { style: { background: C.cream, borderRadius: 22, padding: 28, width: 400, boxShadow: '0 20px 60px rgba(61,12,12,0.22)', border: '1px solid ' + C.border } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 } },
+        React.createElement('h3', { style: { margin: 0, color: C.wine, fontSize: 17, fontWeight: 700 } }, 'Nuevo evento'),
+        React.createElement('button', { onClick: function() { setShowForm(false); }, style: { width: 30, height: 30, borderRadius: 8, border: 'none', background: C.panel, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          React.createElement(Icon, { name: 'x', size: 14, color: C.wine })
         )
       ),
-      React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 8 } },
-        selectedDayEvents.length === 0
-          ? React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.3, paddingTop: 40 } },
-              React.createElement(Icon, { name: 'calendar', size: 28, color: C.wine }),
-              React.createElement('p', { style: { margin: '8px 0 0', fontSize: 12, color: C.wine } }, 'Día libre')
-            )
-          : selectedDayEvents.map(function(ev) {
-              return React.createElement('div', { key: ev.id, style: { background: C.creamDark, borderRadius: 12, padding: '10px 12px', border: '1px solid ' + C.border } },
-                React.createElement('div', { style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' } },
-                  React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-                    React.createElement('div', { style: { display: 'inline-block', fontSize: 9, padding: '2px 7px', borderRadius: 20, fontWeight: 700, marginBottom: 4, background: etColors[ev.event_type] || C.accent, color: 'white', letterSpacing: '0.06em' } }, ev.event_type.toUpperCase()),
-                    React.createElement('p', { style: { margin: '0 0 3px', fontSize: 13, fontWeight: 600, color: C.wine, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, ev.title),
-                    React.createElement('p', { style: { margin: 0, fontSize: 11, color: C.wineLight, display: 'flex', alignItems: 'center', gap: 4 } },
-                      React.createElement(Icon, { name: 'clock', size: 10, color: C.wineLight }),
-                      new Date(ev.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-                      ev.duration_minutes && (' · ' + ev.duration_minutes + ' min')
-                    )
-                  ),
-                  React.createElement('button', { onClick: function() { deleteEvent(ev.id); },
-                    style: { width: 26, height: 26, borderRadius: 7, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', opacity: 0, transition: 'opacity 0.2s' },
-                    onMouseEnter: function(e) { e.currentTarget.style.opacity = 1; e.currentTarget.style.background = '#FEF2F2'; },
-                    onMouseLeave: function(e) { e.currentTarget.style.opacity = 0; e.currentTarget.style.background = 'transparent'; }
-                  }, React.createElement(Icon, { name: 'trash', size: 12, color: '#EF4444' }))
-                )
-              );
-            })
-      )
-    ),
-
-    // ── MODAL NUEVO EVENTO ──
-    showForm && React.createElement('div', { style: { position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(61,12,12,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }, onClick: function(e) { if (e.target === e.currentTarget) setShowForm(false); } },
-      React.createElement('div', { style: { background: C.cream, borderRadius: 22, padding: 28, width: 400, boxShadow: '0 20px 60px rgba(61,12,12,0.2)', border: '1px solid ' + C.border } },
-        React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 } },
-          React.createElement('h3', { style: { margin: 0, color: C.wine, fontSize: 17, fontWeight: 700 } }, 'Nuevo evento'),
-          React.createElement('button', { onClick: function() { setShowForm(false); }, style: { width: 30, height: 30, borderRadius: 8, border: 'none', background: C.panel, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-            React.createElement(Icon, { name: 'x', size: 14, color: C.wine })
+      React.createElement('form', { onSubmit: createEvent, style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+        React.createElement('input', { required: true, placeholder: 'Título del evento', value: newEvent.title, onChange: function(e) { setNewEvent(function(p) { return Object.assign({}, p, { title: e.target.value }); }); }, style: inputS }),
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
+          React.createElement('input', { required: true, type: 'date', value: newEvent.date, onChange: function(e) { setNewEvent(function(p) { return Object.assign({}, p, { date: e.target.value }); }); }, style: inputS }),
+          React.createElement('input', { required: true, type: 'time', value: newEvent.time, onChange: function(e) { setNewEvent(function(p) { return Object.assign({}, p, { time: e.target.value }); }); }, style: inputS })
+        ),
+        React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
+          React.createElement('input', { type: 'number', placeholder: 'Duración (min)', value: newEvent.duration_minutes, onChange: function(e) { setNewEvent(function(p) { return Object.assign({}, p, { duration_minutes: parseInt(e.target.value) }); }); }, style: inputS }),
+          React.createElement('select', { value: newEvent.event_type, onChange: function(e) { setNewEvent(function(p) { return Object.assign({}, p, { event_type: e.target.value }); }); }, style: inputS },
+            ['general','medico','trabajo','personal','deporte','reunion'].map(function(t) { return React.createElement('option', { key: t, value: t }, t.charAt(0).toUpperCase() + t.slice(1)); })
           )
         ),
-        React.createElement('form', { onSubmit: createEvent, style: { display: 'flex', flexDirection: 'column', gap: 10 } },
-          React.createElement('input', { required: true, placeholder: 'Título del evento', value: newEvent.title, onChange: function(e) { setNewEvent(function(p) { return Object.assign({}, p, { title: e.target.value }); }); }, style: inputS }),
-          React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
-            React.createElement('input', { required: true, type: 'date', value: newEvent.date, onChange: function(e) { setNewEvent(function(p) { return Object.assign({}, p, { date: e.target.value }); }); }, style: inputS }),
-            React.createElement('input', { required: true, type: 'time', value: newEvent.time, onChange: function(e) { setNewEvent(function(p) { return Object.assign({}, p, { time: e.target.value }); }); }, style: inputS })
-          ),
-          React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
-            React.createElement('input', { type: 'number', placeholder: 'Duración (min)', value: newEvent.duration_minutes, onChange: function(e) { setNewEvent(function(p) { return Object.assign({}, p, { duration_minutes: parseInt(e.target.value) }); }); }, style: inputS }),
-            React.createElement('select', { value: newEvent.event_type, onChange: function(e) { setNewEvent(function(p) { return Object.assign({}, p, { event_type: e.target.value }); }); }, style: inputS },
-              ['general','medico','trabajo','personal','deporte','reunion'].map(function(t) { return React.createElement('option', { key: t, value: t }, t.charAt(0).toUpperCase() + t.slice(1)); })
-            )
-          ),
-          React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 4 } },
-            React.createElement('button', { type: 'button', onClick: function() { setShowForm(false); }, style: { flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid ' + C.border, background: 'transparent', color: C.wine, fontSize: 13, fontWeight: 500, cursor: 'pointer' } }, 'Cancelar'),
-            React.createElement('button', { type: 'submit', style: { flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,' + C.accent + ',' + C.accentDark + ')', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' } }, 'Crear evento')
-          )
+        React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 6 } },
+          React.createElement('button', { type: 'button', onClick: function() { setShowForm(false); }, style: { flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid ' + C.border, background: 'transparent', color: C.wine, fontSize: 13, fontWeight: 500, cursor: 'pointer' } }, 'Cancelar'),
+          React.createElement('button', { type: 'submit', style: { flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,' + C.accent + ',' + C.accentDark + ')', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' } }, 'Crear evento')
         )
       )
+    )
+  );
+
+  return React.createElement('div', { style: wrapperStyle },
+    // Columna calendario
+    React.createElement('div', { style: calColStyle },
+      calHeader,
+      calDayNames,
+      calGrid
     ),
+    // Columna día
+    dayPanel,
+    // Modal
+    eventModal,
     ToastEl
   );
 }
