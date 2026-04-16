@@ -273,7 +273,7 @@ function Sidebar({ view, setView, onShowAuth, onShowUpgrade }) {
   ];
 
   const S = {
-    aside: { width: 72, minWidth: 72, height: '100vh', background: 'linear-gradient(180deg,' + C.sidebar + ' 0%,' + C.sidebarMid + ' 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '18px 0', boxShadow: '4px 0 20px rgba(0,0,0,0.3)', flexShrink: 0, boxSizing: 'border-box' },
+    aside: { width: 72, minWidth: 72, background: 'linear-gradient(180deg,' + C.sidebar + ' 0%,' + C.sidebarMid + ' 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '18px 0', boxShadow: '4px 0 20px rgba(0,0,0,0.3)', flexShrink: 0, boxSizing: 'border-box', alignSelf: 'stretch' },
     logo:  { width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,' + C.accent + ',' + C.accentDark + ')', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
     ver:   { color: C.gold, fontSize: 9, fontWeight: 600, letterSpacing: 2, opacity: 0.5, marginBottom: 14 },
     div:   { width: 36, height: 1, background: 'linear-gradient(90deg,transparent,' + C.gold + ',transparent)', opacity: 0.3, marginBottom: 14 },
@@ -568,10 +568,8 @@ function CalendarView() {
 
   // ── WRAPPER PRINCIPAL: sidebar ya está a la izquierda, aquí sólo el área de la vista ──
   // Estructura: [COLUMNA CALENDARIO] | [COLUMNA DÍA]
-  var wrapperStyle = { display: 'flex', flexDirection: 'row', width: '100%', height: '100%', overflow: 'hidden', background: C.creamDark };
-
-  // ── COLUMNA IZQUIERDA: cabecera + grid ──
-  var calColStyle = { display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, height: '100%', overflow: 'hidden', padding: '20px' };
+  var wrapperStyle = { display: 'flex', flexDirection: 'row', position: 'absolute', inset: 0, overflow: 'hidden', background: C.creamDark };
+  var calColStyle  = { display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden', padding: '20px' };
 
   // Cabecera mes
   var calHeader = React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexShrink: 0 } },
@@ -602,8 +600,9 @@ function CalendarView() {
     })
   );
 
-  // Grid celdas
-  var calGrid = React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: '1fr', gap: 3, flex: 1, overflow: 'hidden' } },
+  // Grid celdas — gridTemplateRows calculado para que las filas llenen el espacio
+  var numRows = totalCells / 7;
+  var calGrid = React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridTemplateRows: 'repeat(' + numRows + ', 1fr)', gap: 3, flex: 1, minHeight: 0 } },
     Array.from({ length: totalCells }, function(_, i) {
       var day = i - firstDay + 1;
       var isValid  = day >= 1 && day <= daysInMonth;
@@ -666,7 +665,7 @@ function CalendarView() {
   );
 
   // ── COLUMNA DERECHA: panel día ──
-  var dayPanelStyle = { width: 252, minWidth: 252, flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%', background: C.cream, borderLeft: '1px solid ' + C.border, overflow: 'hidden' };
+  var dayPanelStyle = { width: 252, minWidth: 252, flexShrink: 0, display: 'flex', flexDirection: 'column', background: C.cream, borderLeft: '1px solid ' + C.border, overflow: 'hidden' };
 
   var dayPanel = React.createElement('div', { style: dayPanelStyle },
     // Cabecera panel día
@@ -928,10 +927,10 @@ function App() {
     return React.createElement(CalendarView);
   };
 
-  return React.createElement('div', { style: { height: '100vh', display: 'flex', overflow: 'hidden', fontFamily: "'Inter', system-ui, sans-serif" } },
+  return React.createElement('div', { style: { height: '100vh', width: '100vw', display: 'flex', overflow: 'hidden', fontFamily: "'Inter', system-ui, sans-serif", position: 'relative' } },
     React.createElement(Sidebar, { view, setView, onShowAuth: function() { setShowAuth(true); }, onShowUpgrade: function() { setShowUpgrade(true); } }),
-    React.createElement('main', { style: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 } },
-      React.createElement('div', { style: { flex: 1, display: 'flex', overflow: 'hidden' } }, renderView())
+    React.createElement('main', { style: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, position: 'relative' } },
+      React.createElement('div', { style: { position: 'absolute', inset: 0, display: 'flex', overflow: 'hidden' } }, renderView())
     ),
     showAuth && !user && React.createElement(AuthModal, { onClose: function() { setShowAuth(false); } }),
     showUpgrade && !user && React.createElement(UpgradeModal, { onClose: function() { setShowUpgrade(false); }, onShowAuth: function() { setShowUpgrade(false); setShowAuth(true); } }),
