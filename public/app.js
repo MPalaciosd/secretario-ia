@@ -358,13 +358,10 @@ function ActionCard({ actionType, summary }) {
 }
 
 // ── CHAT PANEL ───────────────────────────────────────────────────────────────
-function ChatPanel({ onShowUpgrade }) {
+const INITIAL_MESSAGES = [{ role: 'assistant', content: 'Hola! Soy tu secretario IA. Puedo ayudarte a:\n\n- Crear y organizar eventos en tu agenda\n- Planificar entrenamientos o rutinas\n- Consultar y modificar lo que tienes\n\nCuenta que necesitas hoy.', suggestions: ['Que tengo esta semana?', 'Crear un evento', 'Plan de 4 semanas'] }];
+function ChatPanel({ onShowUpgrade, messages, setMessages }) {
   const { user, isPro } = useAuth();
-  const [messages, setMessages] = useState([{
-    role: 'assistant',
-    content: 'Hola! Soy tu secretario IA. Puedo ayudarte a:\n\n- Crear y organizar eventos en tu agenda\n- Planificar entrenamientos o rutinas\n- Consultar y modificar lo que tienes\n\nCuenta qué necesitas hoy.',
-    suggestions: ['¿Qué tengo esta semana?', 'Crear un evento', 'Plan de 4 semanas']
-  }]);
+  // messages state is managed by parent App (persistent across navigation)
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [msgCount, setMsgCount] = useState(0);
@@ -392,7 +389,7 @@ function ChatPanel({ onShowUpgrade }) {
       setMessages(function(prev) { return prev.concat([{ role: 'assistant', content: data.response, intent: data.intent, action_type: data.action_type, summary: data.summary, suggestions: data.suggestions || [] }]); });
       if (data.plan && data.plan.used >= FREE_LIMIT && !isPro()) setTimeout(function() { onShowUpgrade && onShowUpgrade(); }, 1200);
     } catch(err) {
-      setMessages(function(prev) { return prev.concat([{ role: 'assistant', content: 'Error al conectar. Inténtalo de nuevo.', error: true }]); });
+      setMessages(function(prev) { return prev.concat([{ role: 'assistant', content: err.message && err.message !== 'Error del servidor' ? err.message : 'Error al conectar. Inténtalo de nuevo.', error: true }]); });
       if (err.status === 403 && !isPro()) setTimeout(function() { onShowUpgrade && onShowUpgrade(); }, 1000);
     } finally { setLoading(false); if (inputRef.current) inputRef.current.focus(); }
   };
@@ -901,6 +898,7 @@ function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showPaymentBanner, setShowPaymentBanner] = useState(false);
+  const [chatMessages, setChatMessages] = useState(INITIAL_MESSAGES);
 
   useEffect(function() {
     var params = new URLSearchParams(window.location.search);
@@ -920,7 +918,7 @@ function App() {
 
   var renderView = function() {
     if (view === 'calendar') return React.createElement(CalendarView);
-    if (view === 'chat')     return React.createElement(ChatPanel, { onShowUpgrade: function() { setShowUpgrade(true); } });
+    if (view === 'chat')     return React.createElement(ChatPanel, { onShowUpgrade: function() { setShowUpgrade(true); }, messages: chatMessages, setMessages: setChatMessages });
     if (view === 'account')  return React.createElement(AccountPage, { onShowAuth: function() { setShowAuth(true); } });
     if (view === 'settings') return React.createElement(SettingsPage);
     if (view === 'pricing')  return React.createElement(PricingPage, { onShowAuth: function() { setShowAuth(true); }, onShowUpgrade: function() { setShowUpgrade(true); } });
