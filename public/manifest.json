@@ -10,13 +10,44 @@
   "scope": "/",
   "lang": "es",
   "icons": [
-    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable any" },
-    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" },
-    { "src": "/icons/icon-180x180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ],
   "categories": ["productivity", "utilities"],
   "shortcuts": [
-    { "name": "Agenda", "url": "/?section=agenda" },
-    { "name": "Chat IA", "url": "/?section=chat" }
+    {
+      "name": "Agenda",
+      "short_name": "Agenda",
+      "description": "Ver tu agenda",
+      "url": "/?section=agenda",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Chat IA",
+      "short_name": "Chat IA",
+      "description": "Hablar con el asistente",
+      "url": "/?section=chat",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Planes",
+      "short_name": "Planes",
+      "description": "Ver planes y precios",
+      "url": "/pricing.html",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "Secretario IA - Agenda"
+    }
   ]
 }
